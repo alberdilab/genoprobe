@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from typing import Iterator
 
 from genoprobe.thermo import (
+    DEFAULT_FORMAMIDE_PCT,
     DEFAULT_MONOVALENT_SALT_MM,
     DEFAULT_PROBE_CONC_NM,
     DEFAULT_THERMO_BACKEND,
@@ -78,6 +79,7 @@ class ProbeDesignConfig:
     thermo_backend: str = DEFAULT_THERMO_BACKEND
     monovalent_mm: float = DEFAULT_MONOVALENT_SALT_MM
     probe_conc_nm: float = DEFAULT_PROBE_CONC_NM
+    formamide_pct: float = DEFAULT_FORMAMIDE_PCT
 
 
 def _max_homopolymer(seq: str) -> int:
@@ -175,7 +177,7 @@ def generate_candidates(
                     continue
 
             # Thermodynamic calculations
-            tm = calc_tm(seq, config.thermo_backend, config.monovalent_mm, config.probe_conc_nm)
+            tm = calc_tm(seq, config.thermo_backend, config.monovalent_mm, config.probe_conc_nm, config.formamide_pct)
             if tm < config.min_tm or tm > config.max_tm:
                 continue
 
