@@ -1,0 +1,107 @@
+{
+  "probes": {
+    "default_profile": "balanced",
+    "profiles": {
+      "fast": {
+        "min_probe_length": 36,
+        "max_probe_length": 41,
+        "min_tm": 40.0,
+        "max_tm": 50.0,
+        "min_gc": 20.0,
+        "max_gc": 80.0,
+        "max_homopolymer_run": 5,
+        "max_dinucleotide_run": null,
+        "min_sequence_entropy": null,
+        "max_self_complementarity": null,
+        "max_contiguous_self_complementarity": null,
+        "max_hairpin_tm": null,
+        "max_homodimer_tm": null,
+        "probe_spacing": 0,
+        "thermo_penalty_weight": 0.0
+      },
+      "balanced": {
+        "min_probe_length": 36,
+        "max_probe_length": 41,
+        "min_tm": 42.0,
+        "max_tm": 47.0,
+        "min_gc": 20.0,
+        "max_gc": 75.0,
+        "max_homopolymer_run": 4,
+        "max_dinucleotide_run": 4,
+        "min_sequence_entropy": 0.6,
+        "max_self_complementarity": 14,
+        "max_contiguous_self_complementarity": 6,
+        "max_hairpin_tm": null,
+        "max_homodimer_tm": null,
+        "probe_spacing": 0,
+        "thermo_penalty_weight": 0.15
+      },
+      "strict": {
+        "min_probe_length": 38,
+        "max_probe_length": 40,
+        "min_tm": 44.0,
+        "max_tm": 47.0,
+        "min_gc": 20.0,
+        "max_gc": 70.0,
+        "max_homopolymer_run": 4,
+        "max_dinucleotide_run": 3,
+        "min_sequence_entropy": 0.7,
+        "max_self_complementarity": 12,
+        "max_contiguous_self_complementarity": 5,
+        "max_hairpin_tm": 40.0,
+        "max_homodimer_tm": 40.0,
+        "probe_spacing": 0,
+        "thermo_penalty_weight": 0.3
+      }
+    }
+  },
+  "screen": {
+    "default_profile": "balanced",
+    "profiles": {
+      "fast": {
+        "max_mismatches": 3,
+        "max_kmer_frequency": null,
+        "offtarget_penalty_weight": 0.5,
+        "min_ontarget_fraction": 0.5
+      },
+      "balanced": {
+        "max_mismatches": 2,
+        "max_kmer_frequency": 100,
+        "offtarget_penalty_weight": 1.0,
+        "min_ontarget_fraction": 0.7
+      },
+      "strict": {
+        "max_mismatches": 1,
+        "max_kmer_frequency": 50,
+        "offtarget_penalty_weight": 2.0,
+        "min_ontarget_fraction": 0.85
+      }
+    }
+  },
+  "panels": {
+    "default_profile": "balanced",
+    "profiles": {
+      "fast": {
+        "max_probes_per_target": 100,
+        "max_panel_contiguous_complementarity": null,
+        "max_panel_heterodimer_tm": null,
+        "panel_complementarity_penalty_weight": 0.0,
+        "panel_heterodimer_penalty_weight": 0.0
+      },
+      "balanced": {
+        "max_probes_per_target": 50,
+        "max_panel_contiguous_complementarity": 7,
+        "max_panel_heterodimer_tm": null,
+        "panel_complementarity_penalty_weight": 0.15,
+        "panel_heterodimer_penalty_weight": 0.0
+      },
+      "strict": {
+        "max_probes_per_target": 20,
+        "max_panel_contiguous_complementarity": 6,
+        "max_panel_heterodimer_tm": 40.0,
+        "panel_complementarity_penalty_weight": 0.25,
+        "panel_heterodimer_penalty_weight": 0.3
+      }
+    }
+  }
+}
