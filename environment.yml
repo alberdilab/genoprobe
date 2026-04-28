@@ -1,0 +1,20 @@
+name: genoprobe
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python=3.12
+  - pip
+  - rich>=13.7
+  - typer>=0.12
+  - pyfaidx>=0.8
+  - primer3-py>=2,<3
+  - git
+  - cmake
+  - make
+  - cxx-compiler
+  - rust
+  - zlib
+  - pkg-config
+  - pip:
+      - -e .

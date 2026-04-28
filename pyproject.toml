@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "genoprobe"
+version = "0.1.0"
+description = "Genome- and annotation-driven probe design toolkit."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "rich>=13.7",
+  "typer>=0.12",
+  "pyfaidx>=0.8",
+]
+
+[project.optional-dependencies]
+dev = []
+docs = [
+  "myst-parser>=4,<5",
+  "sphinx>=8,<9",
+  "sphinx-rtd-theme>=3,<4",
+]
+release = [
+  "build>=1.2",
+  "twine>=5",
+]
+thermo = [
+  "primer3-py>=2,<3",
+]
+
+[project.scripts]
+genoprobe = "genoprobe.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+genoprobe = ["data/*.json"]
