@@ -7,7 +7,8 @@ import math
 DEFAULT_MONOVALENT_SALT_MM: float = 390.0
 DEFAULT_DIVALENT_SALT_MM: float = 0.0
 DEFAULT_DNTP_MM: float = 0.0
-DEFAULT_PROBE_CONC_NM: float = 250.0
+DEFAULT_PROBE_CONC_NM: float = 50.0    # total strand concentration (probe + target), Ct/4 = 12.5 nM
+DEFAULT_FORMAMIDE_PCT: float = 50.0    # % formamide; correction = -0.72 °C / %
 DEFAULT_HYB_TEMP_C: float = 42.0
 DEFAULT_THERMO_BACKEND: str = "basic"
 DEFAULT_THERMO_PENALTY_WEIGHT: float = 0.15
@@ -57,7 +58,12 @@ def nn_tm(
     monovalent_mm: float = DEFAULT_MONOVALENT_SALT_MM,
     probe_conc_nm: float = DEFAULT_PROBE_CONC_NM,
 ) -> float:
-    """Nearest-neighbour Tm (SantaLucia 1998)."""
+    """Nearest-neighbour Tm (SantaLucia 1998) with method-5 salt correction.
+
+    probe_conc_nm is the *total* strand concentration (probe + target).
+    Salt correction follows SantaLucia 1998 / Biopython method 5:
+    ΔS_salt = 0.368 × (n−1) × ln([Na+] in M), added directly to ΔS.
+    """
     seq = seq.upper()
     n = len(seq)
     if n < 2:
@@ -66,7 +72,7 @@ def nn_tm(
     dh: float = 0.0
     ds: float = 0.0
 
-    # Initiation
+    # Initiation parameters (SantaLucia 1998, Table 2)
     if seq[0] in "AT":
         dh += _INIT_AT[0]; ds += _INIT_AT[1]
     else:
@@ -82,7 +88,11 @@ def nn_tm(
         if params:
             dh += params[0]; ds += params[1]
 
-    ds_total = ds - _R * math.log(monovalent_mm / 1000.0)
+    # Method-5 salt correction: additive to ΔS (cal/mol/K)
+    salt_corr = 0.368 * (n - 1) * math.log(monovalent_mm / 1000.0)
+    ds_total = ds + salt_corr
+
+    # Ct/4 for non-self-complementary duplex
     ct = probe_conc_nm * 1e-9
     tm_k = (dh * 1000.0) / (ds_total + _R * math.log(ct / 4.0)) - 273.15
     return tm_k
@@ -190,18 +200,25 @@ def calc_tm(
     backend: str = DEFAULT_THERMO_BACKEND,
     monovalent_mm: float = DEFAULT_MONOVALENT_SALT_MM,
     probe_conc_nm: float = DEFAULT_PROBE_CONC_NM,
+    formamide_pct: float = DEFAULT_FORMAMIDE_PCT,
 ) -> float:
+    """Calculate Tm with salt and formamide correction.
+
+    The formamide correction (-0.72 °C per % formamide) is applied after the
+    NN Tm, matching the blockParse / OligoMiner convention.
+    """
     if backend == "primer3":
         try:
             import primer3
-            result = primer3.calc_tm(
+            tm = float(primer3.calc_tm(
                 seq,
                 mv_conc=monovalent_mm,
                 dv_conc=DEFAULT_DIVALENT_SALT_MM,
                 dntp_conc=DEFAULT_DNTP_MM,
                 dna_conc=probe_conc_nm,
-            )
-            return float(result)
+            ))
         except ImportError:
-            pass
-    return nn_tm(seq, monovalent_mm, probe_conc_nm)
+            tm = nn_tm(seq, monovalent_mm, probe_conc_nm)
+    else:
+        tm = nn_tm(seq, monovalent_mm, probe_conc_nm)
+    return tm - 0.72 * formamide_pct

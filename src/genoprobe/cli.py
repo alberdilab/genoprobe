@@ -71,6 +71,7 @@ from genoprobe.reports import (
     write_targets_report,
 )
 from genoprobe.thermo import (
+    DEFAULT_FORMAMIDE_PCT,
     DEFAULT_HYB_TEMP_C,
     DEFAULT_MONOVALENT_SALT_MM,
     DEFAULT_PROBE_CONC_NM,
@@ -242,6 +243,7 @@ def cmd_probes(args: argparse.Namespace) -> int:
         thermo_backend=args.thermo_backend or DEFAULT_THERMO_BACKEND,
         monovalent_mm=args.monovalent_mm or DEFAULT_MONOVALENT_SALT_MM,
         probe_conc_nm=args.probe_conc or DEFAULT_PROBE_CONC_NM,
+        formamide_pct=args.formamide if args.formamide is not None else DEFAULT_FORMAMIDE_PCT,
     )
 
     workers = resolve_worker_count(args.workers)
@@ -588,7 +590,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p_probes.add_argument("--monovalent-mm", type=float, default=None, metavar="MM",
         help=f"Monovalent salt concentration mM (default: {DEFAULT_MONOVALENT_SALT_MM}).")
     p_probes.add_argument("--probe-conc", type=float, default=None, metavar="NM",
-        help=f"Probe concentration nM (default: {DEFAULT_PROBE_CONC_NM}).")
+        help=f"Total strand concentration nM (default: {DEFAULT_PROBE_CONC_NM}).")
+    p_probes.add_argument("--formamide", type=float, default=None, metavar="PCT",
+        help=f"Formamide %% for Tm correction (default: {DEFAULT_FORMAMIDE_PCT}).")
     p_probes.set_defaults(func=cmd_probes)
 
     # ---- screen ------------------------------------------------------------
