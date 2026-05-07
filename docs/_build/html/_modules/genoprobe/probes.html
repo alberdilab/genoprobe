@@ -1,0 +1,357 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>genoprobe.probes &mdash; genoprobe 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            genoprobe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Command reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/targets.html"><code class="docutils literal notranslate"><span class="pre">targets</span></code> — Define probe-design target regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/probes.html"><code class="docutils literal notranslate"><span class="pre">probes</span></code> — Generate probe candidates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/screen.html"><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/panels.html"><code class="docutils literal notranslate"><span class="pre">panels</span></code> — Assemble final probe panels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/index_cmd.html"><code class="docutils literal notranslate"><span class="pre">index</span></code> — Build a Fulgor index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Background</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../profiles.html">Profiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../thermodynamics.html">Thermodynamics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">Python API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">genoprobe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">genoprobe.probes</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for genoprobe.probes</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Probe candidate generation — blockParse logic ported to Python 3.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Iterator</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">genoprobe.thermo</span><span class="w"> </span><span class="kn">import</span> <span class="p">(</span>
+    <span class="n">DEFAULT_FORMAMIDE_PCT</span><span class="p">,</span>
+    <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+    <span class="n">DEFAULT_THERMO_BACKEND</span><span class="p">,</span>
+    <span class="n">DEFAULT_THERMO_PENALTY_WEIGHT</span><span class="p">,</span>
+    <span class="n">calc_tm</span><span class="p">,</span>
+    <span class="n">gc_content</span><span class="p">,</span>
+    <span class="n">hairpin_tm</span><span class="p">,</span>
+    <span class="n">homodimer_tm</span><span class="p">,</span>
+    <span class="n">self_complementarity</span><span class="p">,</span>
+    <span class="n">sequence_entropy</span><span class="p">,</span>
+<span class="p">)</span>
+
+<span class="n">DEFAULT_MIN_PROBE_LENGTH</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">36</span>
+<span class="n">DEFAULT_MAX_PROBE_LENGTH</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">41</span>
+<span class="n">DEFAULT_MIN_TM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">42.0</span>
+<span class="n">DEFAULT_MAX_TM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">47.0</span>
+<span class="n">DEFAULT_MIN_GC</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20.0</span>
+<span class="n">DEFAULT_MAX_GC</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">75.0</span>
+<span class="n">DEFAULT_MAX_HOMOPOLYMER_RUN</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">DEFAULT_MAX_DINUCLEOTIDE_RUN</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="n">DEFAULT_MIN_SEQUENCE_ENTROPY</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mf">0.6</span>
+<span class="n">DEFAULT_MAX_SELF_COMPLEMENTARITY</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">14</span>
+<span class="n">DEFAULT_MAX_CONTIGUOUS_SELF_COMPLEMENTARITY</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="mi">6</span>
+<span class="n">DEFAULT_MAX_HAIRPIN_TM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">DEFAULT_MAX_HOMODIMER_TM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span>
+<span class="n">DEFAULT_PROBE_SPACING</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">DEFAULT_PROHIBITED_SEQUENCES</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="s2">&quot;AAAAA&quot;</span><span class="p">,</span> <span class="s2">&quot;TTTTT&quot;</span><span class="p">,</span> <span class="s2">&quot;CCCCC&quot;</span><span class="p">,</span> <span class="s2">&quot;GGGGG&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="ProbeCandidate">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.probes.ProbeCandidate">[docs]</a>
+<span class="nd">@dataclass</span><span class="p">(</span><span class="n">slots</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProbeCandidate</span><span class="p">:</span>
+    <span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">target_name</span><span class="p">:</span> <span class="nb">str</span>
+    <span class="n">start</span><span class="p">:</span> <span class="nb">int</span>          <span class="c1"># 0-based start on the target sequence</span>
+    <span class="n">end</span><span class="p">:</span> <span class="nb">int</span>            <span class="c1"># 0-based exclusive end</span>
+    <span class="n">tm</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">gc</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">entropy</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">self_comp_total</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">self_comp_run</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">hairpin_tm</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">homodimer_tm</span><span class="p">:</span> <span class="nb">float</span>
+    <span class="n">score</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">passes_filters</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">fail_reason</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">length</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sequence</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="ProbeDesignConfig">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.probes.ProbeDesignConfig">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">ProbeDesignConfig</span><span class="p">:</span>
+    <span class="n">min_probe_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MIN_PROBE_LENGTH</span>
+    <span class="n">max_probe_length</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_PROBE_LENGTH</span>
+    <span class="n">min_tm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MIN_TM</span>
+    <span class="n">max_tm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_TM</span>
+    <span class="n">min_gc</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MIN_GC</span>
+    <span class="n">max_gc</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_GC</span>
+    <span class="n">max_homopolymer_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_HOMOPOLYMER_RUN</span>
+    <span class="n">max_dinucleotide_run</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_DINUCLEOTIDE_RUN</span>
+    <span class="n">min_sequence_entropy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MIN_SEQUENCE_ENTROPY</span>
+    <span class="n">max_self_complementarity</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_SELF_COMPLEMENTARITY</span>
+    <span class="n">max_contiguous_self_complementarity</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_CONTIGUOUS_SELF_COMPLEMENTARITY</span>
+    <span class="n">max_hairpin_tm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_HAIRPIN_TM</span>
+    <span class="n">max_homodimer_tm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="n">DEFAULT_MAX_HOMODIMER_TM</span>
+    <span class="n">probe_spacing</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_SPACING</span>
+    <span class="n">prohibited_sequences</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span> <span class="o">=</span> <span class="n">DEFAULT_PROHIBITED_SEQUENCES</span>
+    <span class="n">thermo_penalty_weight</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_THERMO_PENALTY_WEIGHT</span>
+    <span class="n">thermo_backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_THERMO_BACKEND</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span>
+    <span class="n">formamide_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_FORMAMIDE_PCT</span></div>
+
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_max_homopolymer</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">seq</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">max_run</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">seq</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">seq</span><span class="p">[</span><span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]:</span>
+            <span class="n">run</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">max_run</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_run</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">run</span> <span class="o">=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">max_run</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_max_dinucleotide_run</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="n">max_run</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">while</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="n">dinuc</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span>
+        <span class="k">while</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">1</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="ow">and</span> <span class="n">seq</span><span class="p">[</span><span class="n">j</span> <span class="p">:</span> <span class="n">j</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="n">dinuc</span><span class="p">:</span>
+            <span class="n">count</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">j</span> <span class="o">+=</span> <span class="mi">2</span>
+        <span class="n">max_run</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_run</span><span class="p">,</span> <span class="n">count</span><span class="p">)</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">max_run</span>
+
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_score_probe</span><span class="p">(</span><span class="n">candidate</span><span class="p">:</span> <span class="n">ProbeCandidate</span><span class="p">,</span> <span class="n">config</span><span class="p">:</span> <span class="n">ProbeDesignConfig</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Compute a composite score in [0, 1]; higher is better.&quot;&quot;&quot;</span>
+    <span class="c1"># Tm proximity to midpoint of [min_tm, max_tm]</span>
+    <span class="n">tm_mid</span> <span class="o">=</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">min_tm</span> <span class="o">+</span> <span class="n">config</span><span class="o">.</span><span class="n">max_tm</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="n">tm_range</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">max_tm</span> <span class="o">-</span> <span class="n">config</span><span class="o">.</span><span class="n">min_tm</span><span class="p">)</span> <span class="o">/</span> <span class="mf">2.0</span><span class="p">)</span>
+    <span class="n">tm_score</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">tm</span> <span class="o">-</span> <span class="n">tm_mid</span><span class="p">)</span> <span class="o">/</span> <span class="n">tm_range</span><span class="p">)</span>
+
+    <span class="c1"># GC proximity to 50 %</span>
+    <span class="n">gc_score</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="nb">abs</span><span class="p">(</span><span class="n">candidate</span><span class="o">.</span><span class="n">gc</span> <span class="o">-</span> <span class="mf">50.0</span><span class="p">)</span> <span class="o">/</span> <span class="mf">30.0</span><span class="p">)</span>
+
+    <span class="n">base_score</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">tm_score</span> <span class="o">+</span> <span class="mf">0.3</span> <span class="o">*</span> <span class="n">gc_score</span> <span class="o">+</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="n">candidate</span><span class="o">.</span><span class="n">entropy</span>
+
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">thermo_penalty_weight</span> <span class="o">==</span> <span class="mf">0.0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">base_score</span>
+
+    <span class="c1"># Thermodynamic penalties</span>
+    <span class="n">penalty</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_self_complementarity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">candidate</span><span class="o">.</span><span class="n">self_comp_total</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">penalty</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">candidate</span><span class="o">.</span><span class="n">self_comp_total</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">max_self_complementarity</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_hairpin_tm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">candidate</span><span class="o">.</span><span class="n">hairpin_tm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">penalty</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">candidate</span><span class="o">.</span><span class="n">hairpin_tm</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">max_hairpin_tm</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_homodimer_tm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">candidate</span><span class="o">.</span><span class="n">homodimer_tm</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">penalty</span> <span class="o">+=</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">candidate</span><span class="o">.</span><span class="n">homodimer_tm</span> <span class="o">/</span> <span class="nb">max</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">max_homodimer_tm</span><span class="p">))</span>
+
+    <span class="k">return</span> <span class="n">base_score</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">config</span><span class="o">.</span><span class="n">thermo_penalty_weight</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">penalty</span> <span class="o">/</span> <span class="mf">3.0</span><span class="p">))</span>
+
+
+<div class="viewcode-block" id="generate_candidates">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.probes.generate_candidates">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">generate_candidates</span><span class="p">(</span>
+    <span class="n">sequence</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">target_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">config</span><span class="p">:</span> <span class="n">ProbeDesignConfig</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProbeCandidate</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Sliding-window probe candidate generation with thermodynamic filtering.&quot;&quot;&quot;</span>
+    <span class="n">sequence</span> <span class="o">=</span> <span class="n">sequence</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sequence</span><span class="p">)</span>
+    <span class="n">candidates</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="n">ProbeCandidate</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">last_accepted_end</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span>
+
+    <span class="k">for</span> <span class="n">start</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">probe_len</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">config</span><span class="o">.</span><span class="n">min_probe_length</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">max_probe_length</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">start</span> <span class="o">+</span> <span class="n">probe_len</span>
+            <span class="k">if</span> <span class="n">end</span> <span class="o">&gt;</span> <span class="n">n</span><span class="p">:</span>
+                <span class="k">break</span>
+
+            <span class="n">seq</span> <span class="o">=</span> <span class="n">sequence</span><span class="p">[</span><span class="n">start</span><span class="p">:</span><span class="n">end</span><span class="p">]</span>
+
+            <span class="c1"># Hard filters — cheap checks first</span>
+            <span class="k">if</span> <span class="s2">&quot;N&quot;</span> <span class="ow">in</span> <span class="n">seq</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">p</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">config</span><span class="o">.</span><span class="n">prohibited_sequences</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">gc</span> <span class="o">=</span> <span class="n">gc_content</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">*</span> <span class="mf">100.0</span>
+            <span class="k">if</span> <span class="n">gc</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">min_gc</span> <span class="ow">or</span> <span class="n">gc</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_gc</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">_max_homopolymer</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_homopolymer_run</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_dinucleotide_run</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">_max_dinucleotide_run</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_dinucleotide_run</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+            <span class="c1"># Thermodynamic calculations</span>
+            <span class="n">tm</span> <span class="o">=</span> <span class="n">calc_tm</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">thermo_backend</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">probe_conc_nm</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">formamide_pct</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">tm</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">min_tm</span> <span class="ow">or</span> <span class="n">tm</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_tm</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">entropy</span> <span class="o">=</span> <span class="n">sequence_entropy</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">min_sequence_entropy</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">entropy</span> <span class="o">&lt;</span> <span class="n">config</span><span class="o">.</span><span class="n">min_sequence_entropy</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">sc_total</span><span class="p">,</span> <span class="n">sc_run</span> <span class="o">=</span> <span class="n">self_complementarity</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_self_complementarity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">sc_total</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_self_complementarity</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="p">(</span>
+                <span class="n">config</span><span class="o">.</span><span class="n">max_contiguous_self_complementarity</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+                <span class="ow">and</span> <span class="n">sc_run</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_contiguous_self_complementarity</span>
+            <span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">h_tm</span> <span class="o">=</span> <span class="n">hairpin_tm</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">probe_conc_nm</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_hairpin_tm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">h_tm</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_hairpin_tm</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">hd_tm</span> <span class="o">=</span> <span class="n">homodimer_tm</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">config</span><span class="o">.</span><span class="n">probe_conc_nm</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">max_homodimer_tm</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span> <span class="ow">and</span> <span class="n">hd_tm</span> <span class="o">&gt;</span> <span class="n">config</span><span class="o">.</span><span class="n">max_homodimer_tm</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># Spacing filter</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">probe_spacing</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">last_accepted_end</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">start</span> <span class="o">&lt;</span> <span class="n">last_accepted_end</span> <span class="o">+</span> <span class="n">config</span><span class="o">.</span><span class="n">probe_spacing</span><span class="p">:</span>
+                    <span class="k">continue</span>
+
+            <span class="n">candidate</span> <span class="o">=</span> <span class="n">ProbeCandidate</span><span class="p">(</span>
+                <span class="n">sequence</span><span class="o">=</span><span class="n">seq</span><span class="p">,</span>
+                <span class="n">target_name</span><span class="o">=</span><span class="n">target_name</span><span class="p">,</span>
+                <span class="n">start</span><span class="o">=</span><span class="n">start</span><span class="p">,</span>
+                <span class="n">end</span><span class="o">=</span><span class="n">end</span><span class="p">,</span>
+                <span class="n">tm</span><span class="o">=</span><span class="n">tm</span><span class="p">,</span>
+                <span class="n">gc</span><span class="o">=</span><span class="n">gc</span><span class="p">,</span>
+                <span class="n">entropy</span><span class="o">=</span><span class="n">entropy</span><span class="p">,</span>
+                <span class="n">self_comp_total</span><span class="o">=</span><span class="n">sc_total</span><span class="p">,</span>
+                <span class="n">self_comp_run</span><span class="o">=</span><span class="n">sc_run</span><span class="p">,</span>
+                <span class="n">hairpin_tm</span><span class="o">=</span><span class="n">h_tm</span><span class="p">,</span>
+                <span class="n">homodimer_tm</span><span class="o">=</span><span class="n">hd_tm</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="n">candidate</span><span class="o">.</span><span class="n">score</span> <span class="o">=</span> <span class="n">_score_probe</span><span class="p">(</span><span class="n">candidate</span><span class="p">,</span> <span class="n">config</span><span class="p">)</span>
+            <span class="n">candidates</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">candidate</span><span class="p">)</span>
+            <span class="n">last_accepted_end</span> <span class="o">=</span> <span class="n">end</span>
+            <span class="c1"># Accept the first passing length for this start position</span>
+            <span class="k">break</span>
+
+    <span class="k">return</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">candidates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">c</span><span class="p">:</span> <span class="n">c</span><span class="o">.</span><span class="n">score</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Antton Alberdi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

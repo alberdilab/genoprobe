@@ -1,0 +1,370 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>genoprobe.thermo &mdash; genoprobe 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            genoprobe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../quickstart.html">Quick start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Command reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/targets.html"><code class="docutils literal notranslate"><span class="pre">targets</span></code> — Define probe-design target regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/probes.html"><code class="docutils literal notranslate"><span class="pre">probes</span></code> — Generate probe candidates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/screen.html"><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/panels.html"><code class="docutils literal notranslate"><span class="pre">panels</span></code> — Assemble final probe panels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../commands/index_cmd.html"><code class="docutils literal notranslate"><span class="pre">index</span></code> — Build a Fulgor index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Background</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../profiles.html">Profiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../thermodynamics.html">Thermodynamics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/index.html">Python API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">genoprobe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">genoprobe.thermo</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for genoprobe.thermo</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Thermodynamic heuristics for probe scoring.&quot;&quot;&quot;</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">__future__</span><span class="w"> </span><span class="kn">import</span> <span class="n">annotations</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+
+<span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">390.0</span>
+<span class="n">DEFAULT_DIVALENT_SALT_MM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">DEFAULT_DNTP_MM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+<span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span>    <span class="c1"># total strand concentration (probe + target), Ct/4 = 12.5 nM</span>
+<span class="n">DEFAULT_FORMAMIDE_PCT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">50.0</span>    <span class="c1"># % formamide; correction = -0.72 °C / %</span>
+<span class="n">DEFAULT_HYB_TEMP_C</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">42.0</span>
+<span class="n">DEFAULT_THERMO_BACKEND</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;basic&quot;</span>
+<span class="n">DEFAULT_THERMO_PENALTY_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.15</span>
+<span class="n">DEFAULT_PANEL_COMPLEMENTARITY_PENALTY_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.15</span>
+<span class="n">DEFAULT_PANEL_HETERODIMER_PENALTY_WEIGHT</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+<span class="c1"># Nearest-neighbour parameters (SantaLucia 1998, unified)</span>
+<span class="n">_NN_PARAMS</span><span class="p">:</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]]</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s2">&quot;AA&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.2</span><span class="p">),</span> <span class="s2">&quot;TT&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.9</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.2</span><span class="p">),</span>
+    <span class="s2">&quot;AT&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">20.4</span><span class="p">),</span> <span class="s2">&quot;TA&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">21.3</span><span class="p">),</span>
+    <span class="s2">&quot;CA&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.7</span><span class="p">),</span> <span class="s2">&quot;TG&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.7</span><span class="p">),</span>
+    <span class="s2">&quot;GT&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.4</span><span class="p">),</span> <span class="s2">&quot;AC&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.4</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.4</span><span class="p">),</span>
+    <span class="s2">&quot;CT&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">21.0</span><span class="p">),</span> <span class="s2">&quot;AG&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">7.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">21.0</span><span class="p">),</span>
+    <span class="s2">&quot;GA&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.2</span><span class="p">),</span> <span class="s2">&quot;TC&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.2</span><span class="p">,</span> <span class="o">-</span><span class="mf">22.2</span><span class="p">),</span>
+    <span class="s2">&quot;CG&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">10.6</span><span class="p">,</span> <span class="o">-</span><span class="mf">27.2</span><span class="p">),</span>
+    <span class="s2">&quot;GC&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">9.8</span><span class="p">,</span> <span class="o">-</span><span class="mf">24.4</span><span class="p">),</span>
+    <span class="s2">&quot;GG&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">19.9</span><span class="p">),</span> <span class="s2">&quot;CC&quot;</span><span class="p">:</span> <span class="p">(</span><span class="o">-</span><span class="mf">8.0</span><span class="p">,</span> <span class="o">-</span><span class="mf">19.9</span><span class="p">),</span>
+<span class="p">}</span>
+<span class="n">_INIT_AT</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.3</span><span class="p">,</span> <span class="mf">4.1</span><span class="p">)</span>
+<span class="n">_INIT_GC</span><span class="p">:</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.1</span><span class="p">,</span> <span class="o">-</span><span class="mf">2.8</span><span class="p">)</span>
+<span class="n">_R</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.987</span>  <span class="c1"># cal / (mol·K)</span>
+
+
+<div class="viewcode-block" id="gc_content">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.gc_content">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">gc_content</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">gc</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">if</span> <span class="n">b</span> <span class="ow">in</span> <span class="s2">&quot;GC&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">gc</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span> <span class="k">if</span> <span class="n">seq</span> <span class="k">else</span> <span class="mf">0.0</span></div>
+
+
+
+<div class="viewcode-block" id="basic_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.basic_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">basic_tm</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Salt-adjusted Tm using the Wallace rule for short oligos.&quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="n">gc</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="mi">1</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">seq</span> <span class="k">if</span> <span class="n">b</span> <span class="ow">in</span> <span class="s2">&quot;GC&quot;</span><span class="p">)</span>
+    <span class="n">at</span> <span class="o">=</span> <span class="n">n</span> <span class="o">-</span> <span class="n">gc</span>
+    <span class="n">tm</span> <span class="o">=</span> <span class="mf">81.5</span> <span class="o">+</span> <span class="mf">16.6</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log10</span><span class="p">(</span><span class="n">monovalent_mm</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">)</span> <span class="o">+</span> <span class="mf">41.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">gc</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span> <span class="o">-</span> <span class="p">(</span><span class="mf">500.0</span> <span class="o">/</span> <span class="n">n</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tm</span></div>
+
+
+
+<div class="viewcode-block" id="nn_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.nn_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">nn_tm</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Nearest-neighbour Tm (SantaLucia 1998) with method-5 salt correction.</span>
+
+<span class="sd">    probe_conc_nm is the *total* strand concentration (probe + target).</span>
+<span class="sd">    Salt correction follows SantaLucia 1998 / Biopython method 5:</span>
+<span class="sd">    ΔS_salt = 0.368 × (n−1) × ln([Na+] in M), added directly to ΔS.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+
+    <span class="n">dh</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">ds</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+    <span class="c1"># Initiation parameters (SantaLucia 1998, Table 2)</span>
+    <span class="k">if</span> <span class="n">seq</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">&quot;AT&quot;</span><span class="p">:</span>
+        <span class="n">dh</span> <span class="o">+=</span> <span class="n">_INIT_AT</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">ds</span> <span class="o">+=</span> <span class="n">_INIT_AT</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dh</span> <span class="o">+=</span> <span class="n">_INIT_GC</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">ds</span> <span class="o">+=</span> <span class="n">_INIT_GC</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">if</span> <span class="n">seq</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="ow">in</span> <span class="s2">&quot;AT&quot;</span><span class="p">:</span>
+        <span class="n">dh</span> <span class="o">+=</span> <span class="n">_INIT_AT</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">ds</span> <span class="o">+=</span> <span class="n">_INIT_AT</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">dh</span> <span class="o">+=</span> <span class="n">_INIT_GC</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">ds</span> <span class="o">+=</span> <span class="n">_INIT_GC</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">dinuc</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">2</span><span class="p">]</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">_NN_PARAMS</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">dinuc</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">params</span><span class="p">:</span>
+            <span class="n">dh</span> <span class="o">+=</span> <span class="n">params</span><span class="p">[</span><span class="mi">0</span><span class="p">];</span> <span class="n">ds</span> <span class="o">+=</span> <span class="n">params</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="c1"># Method-5 salt correction: additive to ΔS (cal/mol/K)</span>
+    <span class="n">salt_corr</span> <span class="o">=</span> <span class="mf">0.368</span> <span class="o">*</span> <span class="p">(</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">monovalent_mm</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">)</span>
+    <span class="n">ds_total</span> <span class="o">=</span> <span class="n">ds</span> <span class="o">+</span> <span class="n">salt_corr</span>
+
+    <span class="c1"># Ct/4 for non-self-complementary duplex</span>
+    <span class="n">ct</span> <span class="o">=</span> <span class="n">probe_conc_nm</span> <span class="o">*</span> <span class="mf">1e-9</span>
+    <span class="n">tm_k</span> <span class="o">=</span> <span class="p">(</span><span class="n">dh</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">ds_total</span> <span class="o">+</span> <span class="n">_R</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">ct</span> <span class="o">/</span> <span class="mf">4.0</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+    <span class="k">return</span> <span class="n">tm_k</span></div>
+
+
+
+<div class="viewcode-block" id="sequence_entropy">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.sequence_entropy">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">sequence_entropy</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Shannon entropy of nucleotide composition, normalised 0–1.&quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="n">counts</span> <span class="o">=</span> <span class="p">{</span><span class="n">b</span><span class="p">:</span> <span class="n">seq</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">b</span><span class="p">)</span> <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="s2">&quot;ACGT&quot;</span><span class="p">}</span>
+    <span class="n">entropy</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">counts</span><span class="o">.</span><span class="n">values</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">c</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">p</span> <span class="o">=</span> <span class="n">c</span> <span class="o">/</span> <span class="n">n</span>
+            <span class="n">entropy</span> <span class="o">-=</span> <span class="n">p</span> <span class="o">*</span> <span class="n">math</span><span class="o">.</span><span class="n">log2</span><span class="p">(</span><span class="n">p</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">entropy</span> <span class="o">/</span> <span class="mf">2.0</span>  <span class="c1"># max entropy for 4 bases = 2 bits</span></div>
+
+
+
+<div class="viewcode-block" id="self_complementarity">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.self_complementarity">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">self_complementarity</span><span class="p">(</span><span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return (total_complementary_bases, max_contiguous_run) vs reverse complement.&quot;&quot;&quot;</span>
+    <span class="n">rc</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s2">&quot;ACGTacgt&quot;</span><span class="p">,</span> <span class="s2">&quot;TGCAtgca&quot;</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">total</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">a</span> <span class="o">==</span> <span class="n">b</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">rc</span><span class="p">))</span>
+    <span class="n">max_run</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">rc</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">:</span>
+            <span class="n">run</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="n">max_run</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">max_run</span><span class="p">,</span> <span class="n">run</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">run</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">total</span><span class="p">,</span> <span class="n">max_run</span></div>
+
+
+
+<div class="viewcode-block" id="hairpin_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.hairpin_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">hairpin_tm</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate hairpin melting temperature from the most stable stem.&quot;&quot;&quot;</span>
+    <span class="n">seq</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">upper</span><span class="p">()</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="n">best_stem</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">stem_len</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">n</span> <span class="o">//</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">):</span>
+        <span class="n">arm5</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[:</span><span class="n">stem_len</span><span class="p">]</span>
+        <span class="n">arm3</span> <span class="o">=</span> <span class="n">seq</span><span class="p">[</span><span class="n">n</span> <span class="o">-</span> <span class="n">stem_len</span> <span class="p">:]</span>
+        <span class="n">rc3</span> <span class="o">=</span> <span class="n">arm3</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s2">&quot;ACGT&quot;</span><span class="p">,</span> <span class="s2">&quot;TGCA&quot;</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">arm5</span> <span class="o">==</span> <span class="n">rc3</span><span class="p">:</span>
+            <span class="n">best_stem</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">arm5</span><span class="p">)</span>
+            <span class="k">break</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">best_stem</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="n">stem_seq</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">best_stem</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">nn_tm</span><span class="p">(</span><span class="n">stem_seq</span><span class="p">,</span> <span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">probe_conc_nm</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="homodimer_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.homodimer_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">homodimer_tm</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate homodimer Tm from self-complementarity.&quot;&quot;&quot;</span>
+    <span class="n">total</span><span class="p">,</span> <span class="n">_run</span> <span class="o">=</span> <span class="n">self_complementarity</span><span class="p">(</span><span class="n">seq</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">total</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="c1"># Use the complementary portion as a proxy duplex</span>
+    <span class="n">rc</span> <span class="o">=</span> <span class="n">seq</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s2">&quot;ACGTacgt&quot;</span><span class="p">,</span> <span class="s2">&quot;TGCAtgca&quot;</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">paired</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">a</span> <span class="k">for</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">rc</span><span class="p">)</span> <span class="k">if</span> <span class="n">a</span> <span class="o">==</span> <span class="n">b</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">paired</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="k">return</span> <span class="n">nn_tm</span><span class="p">(</span><span class="n">paired</span><span class="p">,</span> <span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">probe_conc_nm</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="heterodimer_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.heterodimer_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">heterodimer_tm</span><span class="p">(</span>
+    <span class="n">seq_a</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">seq_b</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate worst-case heterodimer Tm between two probe sequences.&quot;&quot;&quot;</span>
+    <span class="n">rc_b</span> <span class="o">=</span> <span class="n">seq_b</span><span class="o">.</span><span class="n">translate</span><span class="p">(</span><span class="nb">str</span><span class="o">.</span><span class="n">maketrans</span><span class="p">(</span><span class="s2">&quot;ACGTacgt&quot;</span><span class="p">,</span> <span class="s2">&quot;TGCAtgca&quot;</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">best_run</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">run_seq</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">current</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="c1"># Sliding alignment of seq_a against rc_b</span>
+    <span class="k">for</span> <span class="n">offset</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq_b</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="nb">len</span><span class="p">(</span><span class="n">seq_a</span><span class="p">)):</span>
+        <span class="n">run</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">seq_a</span><span class="p">)):</span>
+            <span class="n">j</span> <span class="o">=</span> <span class="n">i</span> <span class="o">-</span> <span class="n">offset</span>
+            <span class="k">if</span> <span class="mi">0</span> <span class="o">&lt;=</span> <span class="n">j</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">rc_b</span><span class="p">)</span> <span class="ow">and</span> <span class="n">seq_a</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">rc_b</span><span class="p">[</span><span class="n">j</span><span class="p">]:</span>
+                <span class="n">run</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">run</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="k">if</span> <span class="n">run</span> <span class="o">&gt;</span> <span class="n">best_run</span><span class="p">:</span>
+                <span class="n">best_run</span> <span class="o">=</span> <span class="n">run</span>
+    <span class="k">if</span> <span class="n">best_run</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mf">0.0</span>
+    <span class="n">proxy</span> <span class="o">=</span> <span class="s2">&quot;GC&quot;</span> <span class="o">*</span> <span class="p">(</span><span class="n">best_run</span> <span class="o">//</span> <span class="mi">2</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="s2">&quot;G&quot;</span> <span class="k">if</span> <span class="n">best_run</span> <span class="o">%</span> <span class="mi">2</span> <span class="k">else</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">nn_tm</span><span class="p">(</span><span class="n">proxy</span><span class="p">,</span> <span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">probe_conc_nm</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="calc_tm">
+<a class="viewcode-back" href="../../api/index.html#genoprobe.thermo.calc_tm">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">calc_tm</span><span class="p">(</span>
+    <span class="n">seq</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+    <span class="n">backend</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_THERMO_BACKEND</span><span class="p">,</span>
+    <span class="n">monovalent_mm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_MONOVALENT_SALT_MM</span><span class="p">,</span>
+    <span class="n">probe_conc_nm</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_PROBE_CONC_NM</span><span class="p">,</span>
+    <span class="n">formamide_pct</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_FORMAMIDE_PCT</span><span class="p">,</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">float</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate Tm with salt and formamide correction.</span>
+
+<span class="sd">    The formamide correction (-0.72 °C per % formamide) is applied after the</span>
+<span class="sd">    NN Tm, matching the blockParse / OligoMiner convention.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">backend</span> <span class="o">==</span> <span class="s2">&quot;primer3&quot;</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">primer3</span>
+            <span class="n">tm</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">primer3</span><span class="o">.</span><span class="n">calc_tm</span><span class="p">(</span>
+                <span class="n">seq</span><span class="p">,</span>
+                <span class="n">mv_conc</span><span class="o">=</span><span class="n">monovalent_mm</span><span class="p">,</span>
+                <span class="n">dv_conc</span><span class="o">=</span><span class="n">DEFAULT_DIVALENT_SALT_MM</span><span class="p">,</span>
+                <span class="n">dntp_conc</span><span class="o">=</span><span class="n">DEFAULT_DNTP_MM</span><span class="p">,</span>
+                <span class="n">dna_conc</span><span class="o">=</span><span class="n">probe_conc_nm</span><span class="p">,</span>
+            <span class="p">))</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="n">tm</span> <span class="o">=</span> <span class="n">nn_tm</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">probe_conc_nm</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">tm</span> <span class="o">=</span> <span class="n">nn_tm</span><span class="p">(</span><span class="n">seq</span><span class="p">,</span> <span class="n">monovalent_mm</span><span class="p">,</span> <span class="n">probe_conc_nm</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">tm</span> <span class="o">-</span> <span class="mf">0.72</span> <span class="o">*</span> <span class="n">formamide_pct</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Antton Alberdi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

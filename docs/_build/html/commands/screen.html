@@ -1,0 +1,334 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>screen — Off-target screening &mdash; genoprobe 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="panels — Assemble final probe panels" href="panels.html" />
+    <link rel="prev" title="probes — Generate probe candidates" href="probes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            genoprobe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Command reference</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="targets.html"><code class="docutils literal notranslate"><span class="pre">targets</span></code> — Define probe-design target regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="probes.html"><code class="docutils literal notranslate"><span class="pre">probes</span></code> — Generate probe candidates</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#required-arguments">Required arguments</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#optional-arguments">Optional arguments</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#profile">Profile</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mismatch-matching">Mismatch matching</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#k-mer-frequency-filter">k-mer frequency filter</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fulgor-secondary-screening">Fulgor secondary screening</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#parallelism">Parallelism</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#how-screening-works">How screening works</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-files">Output files</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#screened-tsv-additional-columns"><code class="docutils literal notranslate"><span class="pre">screened.tsv</span></code> additional columns</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#notes">Notes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="panels.html"><code class="docutils literal notranslate"><span class="pre">panels</span></code> — Assemble final probe panels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="index_cmd.html"><code class="docutils literal notranslate"><span class="pre">index</span></code> — Build a Fulgor index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Background</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../profiles.html">Profiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../thermodynamics.html">Thermodynamics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">Python API reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">genoprobe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active"><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/commands/screen.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="screen-off-target-screening">
+<h1><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening<a class="headerlink" href="#screen-off-target-screening" title="Link to this heading"></a></h1>
+<p>The <code class="docutils literal notranslate"><span class="pre">screen</span></code> command filters probe candidates by searching for off-target matches
+across one or more genome sequences using a mismatch-tolerant string search. It
+also supports k-mer frequency pre-filtering to quickly reject probes that match
+repetitive regions.</p>
+<section id="usage">
+<h2>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">genoprobe</span> <span class="n">screen</span> <span class="o">--</span><span class="n">genomes</span> <span class="n">FASTA</span> <span class="p">[</span><span class="n">FASTA</span> <span class="o">...</span><span class="p">]</span> <span class="o">--</span><span class="n">output</span> <span class="n">DIR</span> <span class="p">[</span><span class="n">OPTIONS</span><span class="p">]</span>
+</pre></div>
+</div>
+<p><strong>Requires:</strong> <code class="docutils literal notranslate"><span class="pre">probes</span></code> has already been run (reads <code class="docutils literal notranslate"><span class="pre">&lt;output&gt;/probes/candidates.tsv</span></code>).</p>
+</section>
+<section id="required-arguments">
+<h2>Required arguments<a class="headerlink" href="#required-arguments" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--genomes</span> <span class="pre">/</span> <span class="pre">-g</span></code></p></td>
+<td><p>One or more genome FASTA files to screen against. Typically the same genome(s) used in <code class="docutils literal notranslate"><span class="pre">targets</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">--output</span> <span class="pre">/</span> <span class="pre">-o</span></code></p></td>
+<td><p>Output directory used in the preceding pipeline stages.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="optional-arguments">
+<h2>Optional arguments<a class="headerlink" href="#optional-arguments" title="Link to this heading"></a></h2>
+<section id="profile">
+<h3>Profile<a class="headerlink" href="#profile" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--profile</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">balanced</span></code></p></td>
+<td><p>Parameter preset: <code class="docutils literal notranslate"><span class="pre">fast</span></code>, <code class="docutils literal notranslate"><span class="pre">balanced</span></code>, or <code class="docutils literal notranslate"><span class="pre">strict</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+<p>See <a class="reference internal" href="../profiles.html"><span class="std std-doc">Profiles</span></a> for profile-specific parameter values.</p>
+</section>
+<section id="mismatch-matching">
+<h3>Mismatch matching<a class="headerlink" href="#mismatch-matching" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--max-mismatches</span> <span class="pre">N</span></code></p></td>
+<td><p>2</p></td>
+<td><p>Maximum number of mismatches allowed when calling an off-target hit.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="k-mer-frequency-filter">
+<h3>k-mer frequency filter<a class="headerlink" href="#k-mer-frequency-filter" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--max-kmer-frequency</span> <span class="pre">N</span></code></p></td>
+<td><p>100</p></td>
+<td><p>Discard any probe whose most frequent 18-mer appears more than N times in the genome. Set to omit k-mer filtering.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="fulgor-secondary-screening">
+<h3>Fulgor secondary screening<a class="headerlink" href="#fulgor-secondary-screening" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--index</span> <span class="pre">DIR</span></code></p></td>
+<td><p>Path to a pre-built Fulgor index directory (see <a class="reference internal" href="index_cmd.html"><span class="std std-doc"><code class="docutils literal notranslate"><span class="pre">index</span></code></span></a>). When provided, Fulgor is used for a secondary k-mer presence query after the primary mismatch search.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="parallelism">
+<h3>Parallelism<a class="headerlink" href="#parallelism" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Argument</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">--workers</span> <span class="pre">/</span> <span class="pre">-w</span> <span class="pre">N</span></code></p></td>
+<td><p>auto</p></td>
+<td><p>Number of worker processes.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="how-screening-works">
+<h2>How screening works<a class="headerlink" href="#how-screening-works" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>k-mer frequency filter</strong> (optional): A 18-mer index is built from all genome
+sequences. Any candidate whose most frequent 18-mer exceeds <code class="docutils literal notranslate"><span class="pre">--max-kmer-frequency</span></code>
+is discarded immediately.</p></li>
+<li><p><strong>Mismatch matching</strong>: Each surviving candidate is aligned against every genome
+sequence. Hits within the probe’s own target BED interval are counted as
+<em>on-target</em>; all other hits are counted as <em>off-target</em>.</p></li>
+<li><p><strong>On-target fraction filter</strong>: Candidates where the on-target alignment score
+falls below <code class="docutils literal notranslate"><span class="pre">min_ontarget_fraction</span></code> (profile parameter) are discarded.</p></li>
+<li><p><strong>Off-target score adjustment</strong>: The candidate’s <code class="docutils literal notranslate"><span class="pre">score</span></code> from the <code class="docutils literal notranslate"><span class="pre">probes</span></code> stage
+is penalised proportionally to the number and strength of off-target hits, using
+the <code class="docutils literal notranslate"><span class="pre">offtarget_penalty_weight</span></code> profile parameter.</p></li>
+</ol>
+</section>
+<section id="output-files">
+<h2>Output files<a class="headerlink" href="#output-files" title="Link to this heading"></a></h2>
+<p>All outputs are written to <code class="docutils literal notranslate"><span class="pre">&lt;output&gt;/screen/</span></code>.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">screened.tsv</span></code></p></td>
+<td><p>All candidates passing screening, with added off-target columns.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">screen_summary.json</span></code></p></td>
+<td><p>JSON summary: total passing count and per-target counts.</p></td>
+</tr>
+</tbody>
+</table>
+<section id="screened-tsv-additional-columns">
+<h3><code class="docutils literal notranslate"><span class="pre">screened.tsv</span></code> additional columns<a class="headerlink" href="#screened-tsv-additional-columns" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">screened.tsv</span></code> file contains all columns from <code class="docutils literal notranslate"><span class="pre">candidates.tsv</span></code> plus:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Column</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">on_target_hits</span></code></p></td>
+<td><p>Number of hits within the target BED interval.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">off_target_hits</span></code></p></td>
+<td><p>Number of hits outside target intervals.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">on_target_score</span></code></p></td>
+<td><p>Fraction of on-target alignment strength.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">off_target_score</span></code></p></td>
+<td><p>Aggregate off-target penalty score.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">final_score</span></code></p></td>
+<td><p>Adjusted composite score after off-target penalty.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="notes">
+<h2>Notes<a class="headerlink" href="#notes" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Screening is performed in-memory. For very large genomes (&gt; 5 Gbp), memory usage
+can be substantial. Consider splitting the genome into chromosomes and screening
+in batches.</p></li>
+<li><p>If <code class="docutils literal notranslate"><span class="pre">screened.tsv</span></code> is present when <code class="docutils literal notranslate"><span class="pre">panels</span></code> is run, it is preferred over the raw
+<code class="docutils literal notranslate"><span class="pre">candidates.tsv</span></code>.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="probes.html" class="btn btn-neutral float-left" title="probes — Generate probe candidates" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="panels.html" class="btn btn-neutral float-right" title="panels — Assemble final probe panels" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Antton Alberdi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
