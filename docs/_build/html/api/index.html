@@ -1,0 +1,1397 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Python API reference &mdash; genoprobe 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Thermodynamics" href="../thermodynamics.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            genoprobe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quick start</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Command reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../commands/targets.html"><code class="docutils literal notranslate"><span class="pre">targets</span></code> — Define probe-design target regions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../commands/probes.html"><code class="docutils literal notranslate"><span class="pre">probes</span></code> — Generate probe candidates</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../commands/screen.html"><code class="docutils literal notranslate"><span class="pre">screen</span></code> — Off-target screening</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../commands/panels.html"><code class="docutils literal notranslate"><span class="pre">panels</span></code> — Assemble final probe panels</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../commands/index_cmd.html"><code class="docutils literal notranslate"><span class="pre">index</span></code> — Build a Fulgor index</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Background</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../profiles.html">Profiles</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../thermodynamics.html">Thermodynamics</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Developer reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Python API reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.probes">genoprobe.probes</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.probes.ProbeCandidate"><code class="docutils literal notranslate"><span class="pre">ProbeCandidate</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.probes.ProbeDesignConfig"><code class="docutils literal notranslate"><span class="pre">ProbeDesignConfig</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.probes.generate_candidates"><code class="docutils literal notranslate"><span class="pre">generate_candidates()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.thermo">genoprobe.thermo</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.gc_content"><code class="docutils literal notranslate"><span class="pre">gc_content()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.basic_tm"><code class="docutils literal notranslate"><span class="pre">basic_tm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.nn_tm"><code class="docutils literal notranslate"><span class="pre">nn_tm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.sequence_entropy"><code class="docutils literal notranslate"><span class="pre">sequence_entropy()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.self_complementarity"><code class="docutils literal notranslate"><span class="pre">self_complementarity()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.hairpin_tm"><code class="docutils literal notranslate"><span class="pre">hairpin_tm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.homodimer_tm"><code class="docutils literal notranslate"><span class="pre">homodimer_tm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.heterodimer_tm"><code class="docutils literal notranslate"><span class="pre">heterodimer_tm()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.thermo.calc_tm"><code class="docutils literal notranslate"><span class="pre">calc_tm()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.genome">genoprobe.genome</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.GenomeRecord"><code class="docutils literal notranslate"><span class="pre">GenomeRecord</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.load_fasta"><code class="docutils literal notranslate"><span class="pre">load_fasta()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.iter_sequences"><code class="docutils literal notranslate"><span class="pre">iter_sequences()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.load_genomes"><code class="docutils literal notranslate"><span class="pre">load_genomes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.extract_region"><code class="docutils literal notranslate"><span class="pre">extract_region()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.count_kmers"><code class="docutils literal notranslate"><span class="pre">count_kmers()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.build_kmer_index"><code class="docutils literal notranslate"><span class="pre">build_kmer_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.genome.query_kmer_frequency"><code class="docutils literal notranslate"><span class="pre">query_kmer_frequency()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.annotation">genoprobe.annotation</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.annotation.AnnotationRecord"><code class="docutils literal notranslate"><span class="pre">AnnotationRecord</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.annotation.detect_format"><code class="docutils literal notranslate"><span class="pre">detect_format()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.annotation.load_annotation"><code class="docutils literal notranslate"><span class="pre">load_annotation()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.annotation.summarize_annotation"><code class="docutils literal notranslate"><span class="pre">summarize_annotation()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.matching">genoprobe.matching</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.MatchHit"><code class="docutils literal notranslate"><span class="pre">MatchHit</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.MatchSummary"><code class="docutils literal notranslate"><span class="pre">MatchSummary</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.reverse_complement"><code class="docutils literal notranslate"><span class="pre">reverse_complement()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.count_mismatches"><code class="docutils literal notranslate"><span class="pre">count_mismatches()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.find_hits"><code class="docutils literal notranslate"><span class="pre">find_hits()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.matching.mismatch_support"><code class="docutils literal notranslate"><span class="pre">mismatch_support()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.panels">genoprobe.panels</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.panels.PanelConfig"><code class="docutils literal notranslate"><span class="pre">PanelConfig</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.panels.PanelResult"><code class="docutils literal notranslate"><span class="pre">PanelResult</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.panels.assemble_panel"><code class="docutils literal notranslate"><span class="pre">assemble_panel()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.indexing">genoprobe.indexing</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.indexing.find_fulgor"><code class="docutils literal notranslate"><span class="pre">find_fulgor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.indexing.find_ggcat"><code class="docutils literal notranslate"><span class="pre">find_ggcat()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.indexing.require_fulgor"><code class="docutils literal notranslate"><span class="pre">require_fulgor()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.indexing.build_fulgor_index"><code class="docutils literal notranslate"><span class="pre">build_fulgor_index()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.indexing.query_fulgor_index"><code class="docutils literal notranslate"><span class="pre">query_fulgor_index()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.paths">genoprobe.paths</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.resolve_output_root"><code class="docutils literal notranslate"><span class="pre">resolve_output_root()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.targets_dir"><code class="docutils literal notranslate"><span class="pre">targets_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.probes_dir"><code class="docutils literal notranslate"><span class="pre">probes_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.screen_dir"><code class="docutils literal notranslate"><span class="pre">screen_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.panels_dir"><code class="docutils literal notranslate"><span class="pre">panels_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.index_dir"><code class="docutils literal notranslate"><span class="pre">index_dir()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.paths.ensure_dir"><code class="docutils literal notranslate"><span class="pre">ensure_dir()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#module-genoprobe.profile_defaults">genoprobe.profile_defaults</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.profile_defaults.load_profile_catalog"><code class="docutils literal notranslate"><span class="pre">load_profile_catalog()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.profile_defaults.get_stage_default_profile"><code class="docutils literal notranslate"><span class="pre">get_stage_default_profile()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.profile_defaults.get_stage_profile_names"><code class="docutils literal notranslate"><span class="pre">get_stage_profile_names()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#genoprobe.profile_defaults.get_stage_profile_defaults"><code class="docutils literal notranslate"><span class="pre">get_stage_profile_defaults()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">genoprobe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Python API reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="python-api-reference">
+<h1>Python API reference<a class="headerlink" href="#python-api-reference" title="Link to this heading"></a></h1>
+<p>genoprobe exposes its core logic as importable Python modules. All public symbols
+are importable directly from their respective modules.</p>
+<div class="toctree-wrapper compound">
+</div>
+<nav class="contents local" id="modules">
+<p class="topic-title">Modules</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="#module-genoprobe.probes" id="id1">genoprobe.probes</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.thermo" id="id2">genoprobe.thermo</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.genome" id="id3">genoprobe.genome</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.annotation" id="id4">genoprobe.annotation</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.matching" id="id5">genoprobe.matching</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.panels" id="id6">genoprobe.panels</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.indexing" id="id7">genoprobe.indexing</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.paths" id="id8">genoprobe.paths</a></p></li>
+<li><p><a class="reference internal" href="#module-genoprobe.profile_defaults" id="id9">genoprobe.profile_defaults</a></p></li>
+</ul>
+</nav>
+<section id="module-genoprobe.probes">
+<span id="genoprobe-probes"></span><h2><a class="toc-backref" href="#id1" role="doc-backlink">genoprobe.probes</a><a class="headerlink" href="#module-genoprobe.probes" title="Link to this heading"></a></h2>
+<p>Probe candidate generation — blockParse logic ported to Python 3.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.probes.</span></span><span class="sig-name descname"><span class="pre">ProbeCandidate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">gc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">entropy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_comp_total</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">self_comp_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hairpin_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">homodimer_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">passes_filters</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'bool'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fail_reason</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/probes.html#ProbeCandidate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.probes.ProbeCandidate" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>target_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>end</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>gc</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>entropy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>self_comp_total</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>self_comp_run</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>hairpin_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>homodimer_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>score</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>passes_filters</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+<li><p><strong>fail_reason</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.sequence">
+<span class="sig-name descname"><span class="pre">sequence</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.sequence" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.target_name">
+<span class="sig-name descname"><span class="pre">target_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.target_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.start">
+<span class="sig-name descname"><span class="pre">start</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.start" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.end">
+<span class="sig-name descname"><span class="pre">end</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.end" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.tm">
+<span class="sig-name descname"><span class="pre">tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.gc">
+<span class="sig-name descname"><span class="pre">gc</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.gc" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.entropy">
+<span class="sig-name descname"><span class="pre">entropy</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.entropy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.self_comp_total">
+<span class="sig-name descname"><span class="pre">self_comp_total</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.self_comp_total" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.self_comp_run">
+<span class="sig-name descname"><span class="pre">self_comp_run</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.self_comp_run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.hairpin_tm">
+<span class="sig-name descname"><span class="pre">hairpin_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.hairpin_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.homodimer_tm">
+<span class="sig-name descname"><span class="pre">homodimer_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.homodimer_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.score">
+<span class="sig-name descname"><span class="pre">score</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.score" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.passes_filters">
+<span class="sig-name descname"><span class="pre">passes_filters</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.passes_filters" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.fail_reason">
+<span class="sig-name descname"><span class="pre">fail_reason</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.fail_reason" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeCandidate.length">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.probes.ProbeCandidate.length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.probes.</span></span><span class="sig-name descname"><span class="pre">ProbeDesignConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">min_probe_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">36</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_probe_length</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">41</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">42.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">47.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_gc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">20.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_gc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">75.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_homopolymer_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_dinucleotide_run</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">4</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">min_sequence_entropy</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_self_complementarity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">14</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_contiguous_self_complementarity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">6</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_hairpin_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_homodimer_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">prohibited_sequences</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'tuple[str,</span> <span class="pre">...]'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">('AAAAA',</span> <span class="pre">'TTTTT',</span> <span class="pre">'CCCCC',</span> <span class="pre">'GGGGG')</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thermo_penalty_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">thermo_backend</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'basic'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">formamide_pct</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/probes.html#ProbeDesignConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>min_probe_length</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>max_probe_length</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>min_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>max_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>min_gc</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>max_gc</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>max_homopolymer_run</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>max_dinucleotide_run</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>min_sequence_entropy</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>max_self_complementarity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>max_contiguous_self_complementarity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>max_hairpin_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>max_homodimer_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>probe_spacing</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>prohibited_sequences</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><em>tuple</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><em>...</em><em>]</em>)</p></li>
+<li><p><strong>thermo_penalty_weight</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>thermo_backend</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>formamide_pct</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.min_probe_length">
+<span class="sig-name descname"><span class="pre">min_probe_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">36</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.min_probe_length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_probe_length">
+<span class="sig-name descname"><span class="pre">max_probe_length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">41</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_probe_length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.min_tm">
+<span class="sig-name descname"><span class="pre">min_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">42.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.min_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_tm">
+<span class="sig-name descname"><span class="pre">max_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">47.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.min_gc">
+<span class="sig-name descname"><span class="pre">min_gc</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">20.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.min_gc" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_gc">
+<span class="sig-name descname"><span class="pre">max_gc</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">75.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_gc" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_homopolymer_run">
+<span class="sig-name descname"><span class="pre">max_homopolymer_run</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_homopolymer_run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_dinucleotide_run">
+<span class="sig-name descname"><span class="pre">max_dinucleotide_run</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">4</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_dinucleotide_run" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.min_sequence_entropy">
+<span class="sig-name descname"><span class="pre">min_sequence_entropy</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.6</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.min_sequence_entropy" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_self_complementarity">
+<span class="sig-name descname"><span class="pre">max_self_complementarity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">14</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_self_complementarity" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_contiguous_self_complementarity">
+<span class="sig-name descname"><span class="pre">max_contiguous_self_complementarity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">6</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_contiguous_self_complementarity" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_hairpin_tm">
+<span class="sig-name descname"><span class="pre">max_hairpin_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_hairpin_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.max_homodimer_tm">
+<span class="sig-name descname"><span class="pre">max_homodimer_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.max_homodimer_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.probe_spacing">
+<span class="sig-name descname"><span class="pre">probe_spacing</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.probe_spacing" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.prohibited_sequences">
+<span class="sig-name descname"><span class="pre">prohibited_sequences</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)"><span class="pre">tuple</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="p"><span class="pre">...</span></span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">('AAAAA',</span> <span class="pre">'TTTTT',</span> <span class="pre">'CCCCC',</span> <span class="pre">'GGGGG')</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.prohibited_sequences" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.thermo_penalty_weight">
+<span class="sig-name descname"><span class="pre">thermo_penalty_weight</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.15</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.thermo_penalty_weight" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.thermo_backend">
+<span class="sig-name descname"><span class="pre">thermo_backend</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'basic'</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.thermo_backend" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.monovalent_mm">
+<span class="sig-name descname"><span class="pre">monovalent_mm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">390.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.monovalent_mm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.probe_conc_nm">
+<span class="sig-name descname"><span class="pre">probe_conc_nm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.probe_conc_nm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.probes.ProbeDesignConfig.formamide_pct">
+<span class="sig-name descname"><span class="pre">formamide_pct</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50.0</span></em><a class="headerlink" href="#genoprobe.probes.ProbeDesignConfig.formamide_pct" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.probes.generate_candidates">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.probes.</span></span><span class="sig-name descname"><span class="pre">generate_candidates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/probes.html#generate_candidates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.probes.generate_candidates" title="Link to this definition"></a></dt>
+<dd><p>Sliding-window probe candidate generation with thermodynamic filtering.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>target_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>config</strong> (<a class="reference internal" href="#genoprobe.probes.ProbeDesignConfig" title="genoprobe.probes.ProbeDesignConfig"><em>ProbeDesignConfig</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference internal" href="#genoprobe.probes.ProbeCandidate" title="genoprobe.probes.ProbeCandidate"><em>ProbeCandidate</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.thermo">
+<span id="genoprobe-thermo"></span><h2><a class="toc-backref" href="#id2" role="doc-backlink">genoprobe.thermo</a><a class="headerlink" href="#module-genoprobe.thermo" title="Link to this heading"></a></h2>
+<p>Thermodynamic heuristics for probe scoring.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.gc_content">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">gc_content</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#gc_content"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.gc_content" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.basic_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">basic_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#basic_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.basic_tm" title="Link to this definition"></a></dt>
+<dd><p>Salt-adjusted Tm using the Wallace rule for short oligos.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.nn_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">nn_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#nn_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.nn_tm" title="Link to this definition"></a></dt>
+<dd><p>Nearest-neighbour Tm (SantaLucia 1998) with method-5 salt correction.</p>
+<p>probe_conc_nm is the <em>total</em> strand concentration (probe + target).
+Salt correction follows SantaLucia 1998 / Biopython method 5:
+ΔS_salt = 0.368 × (n−1) × ln([Na+] in M), added directly to ΔS.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.sequence_entropy">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">sequence_entropy</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#sequence_entropy"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.sequence_entropy" title="Link to this definition"></a></dt>
+<dd><p>Shannon entropy of nucleotide composition, normalised 0–1.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.self_complementarity">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">self_complementarity</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#self_complementarity"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.self_complementarity" title="Link to this definition"></a></dt>
+<dd><p>Return (total_complementary_bases, max_contiguous_run) vs reverse complement.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.hairpin_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">hairpin_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#hairpin_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.hairpin_tm" title="Link to this definition"></a></dt>
+<dd><p>Estimate hairpin melting temperature from the most stable stem.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.homodimer_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">homodimer_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#homodimer_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.homodimer_tm" title="Link to this definition"></a></dt>
+<dd><p>Estimate homodimer Tm from self-complementarity.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.heterodimer_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">heterodimer_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq_a</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seq_b</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#heterodimer_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.heterodimer_tm" title="Link to this definition"></a></dt>
+<dd><p>Estimate worst-case heterodimer Tm between two probe sequences.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq_a</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>seq_b</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.thermo.calc_tm">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.thermo.</span></span><span class="sig-name descname"><span class="pre">calc_tm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">backend</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'basic'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">monovalent_mm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">390.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_conc_nm</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">formamide_pct</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/thermo.html#calc_tm"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.thermo.calc_tm" title="Link to this definition"></a></dt>
+<dd><p>Calculate Tm with salt and formamide correction.</p>
+<p>The formamide correction (-0.72 °C per % formamide) is applied after the
+NN Tm, matching the blockParse / OligoMiner convention.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>backend</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>monovalent_mm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>probe_conc_nm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>formamide_pct</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.genome">
+<span id="genoprobe-genome"></span><h2><a class="toc-backref" href="#id3" role="doc-backlink">genoprobe.genome</a><a class="headerlink" href="#module-genoprobe.genome" title="Link to this heading"></a></h2>
+<p>FASTA genome handling via pyfaidx.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.genome.GenomeRecord">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">GenomeRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_file</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'Path'</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#GenomeRecord"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.GenomeRecord" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>sequence</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>source_file</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.genome.GenomeRecord.name">
+<span class="sig-name descname"><span class="pre">name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.genome.GenomeRecord.name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.genome.GenomeRecord.sequence">
+<span class="sig-name descname"><span class="pre">sequence</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.genome.GenomeRecord.sequence" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.genome.GenomeRecord.source_file">
+<span class="sig-name descname"><span class="pre">source_file</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><span class="pre">Path</span></a></em><a class="headerlink" href="#genoprobe.genome.GenomeRecord.source_file" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.genome.GenomeRecord.length">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.genome.GenomeRecord.length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.load_fasta">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">load_fasta</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#load_fasta"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.load_fasta" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Fasta</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.iter_sequences">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">iter_sequences</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#iter_sequences"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.iter_sequences" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fasta</strong> (<em>Fasta</em>)</p></li>
+<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Iterator" title="(in Python v3.14)"><em>Iterator</em></a>[<a class="reference internal" href="#genoprobe.genome.GenomeRecord" title="genoprobe.genome.GenomeRecord"><em>GenomeRecord</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.load_genomes">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">load_genomes</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">paths</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#load_genomes"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.load_genomes" title="Link to this definition"></a></dt>
+<dd><p>Load all sequences from one or more FASTA files.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>paths</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference internal" href="#genoprobe.genome.GenomeRecord" title="genoprobe.genome.GenomeRecord"><em>GenomeRecord</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.extract_region">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">extract_region</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fasta</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seqid</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#extract_region"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.extract_region" title="Link to this definition"></a></dt>
+<dd><p>Extract sequence for a genomic region (1-based, inclusive).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fasta</strong> (<em>Fasta</em>)</p></li>
+<li><p><strong>seqid</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>end</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.count_kmers">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">count_kmers</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#count_kmers"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.count_kmers" title="Link to this definition"></a></dt>
+<dd><p>Count all k-mers in a sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>sequence</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.build_kmer_index">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">build_kmer_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#build_kmer_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.build_kmer_index" title="Link to this definition"></a></dt>
+<dd><p>Build a genome-wide k-mer frequency index across all records.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>records</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.genome.GenomeRecord" title="genoprobe.genome.GenomeRecord"><em>GenomeRecord</em></a><em>]</em>)</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.genome.query_kmer_frequency">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.genome.</span></span><span class="sig-name descname"><span class="pre">query_kmer_frequency</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sequence</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">18</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/genome.html#query_kmer_frequency"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.genome.query_kmer_frequency" title="Link to this definition"></a></dt>
+<dd><p>Return the maximum k-mer frequency for any k-mer in the sequence.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em>]</em>)</p></li>
+<li><p><strong>sequence</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>k</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.annotation">
+<span id="genoprobe-annotation"></span><h2><a class="toc-backref" href="#id4" role="doc-backlink">genoprobe.annotation</a><a class="headerlink" href="#module-genoprobe.annotation" title="Link to this heading"></a></h2>
+<p>GFF3 and GTF annotation parser with auto-format detection.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.annotation.</span></span><span class="sig-name descname"><span class="pre">AnnotationRecord</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seqid:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">source:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start:</span> <span class="pre">'int'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end:</span> <span class="pre">'int'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">score:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strand:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">phase:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">attributes:</span> <span class="pre">'dict[str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">str]'</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/annotation.html#AnnotationRecord"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>seqid</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>source</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>feature</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>start</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>end</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>score</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>strand</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>phase</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>attributes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><em>dict</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>, </em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.seqid">
+<span class="sig-name descname"><span class="pre">seqid</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.seqid" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.source">
+<span class="sig-name descname"><span class="pre">source</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.source" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.feature">
+<span class="sig-name descname"><span class="pre">feature</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.feature" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.start">
+<span class="sig-name descname"><span class="pre">start</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.start" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.end">
+<span class="sig-name descname"><span class="pre">end</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.end" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.score">
+<span class="sig-name descname"><span class="pre">score</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.score" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.strand">
+<span class="sig-name descname"><span class="pre">strand</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.strand" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.phase">
+<span class="sig-name descname"><span class="pre">phase</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.phase" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.attributes">
+<span class="sig-name descname"><span class="pre">attributes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)"><span class="pre">dict</span></a><span class="p"><span class="pre">[</span></span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">,</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.attributes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.length">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">length</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.length" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="genoprobe.annotation.AnnotationRecord.get_attr">
+<span class="sig-name descname"><span class="pre">get_attr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">key</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">default</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/annotation.html#AnnotationRecord.get_attr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.annotation.AnnotationRecord.get_attr" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>key</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>default</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.annotation.detect_format">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.annotation.</span></span><span class="sig-name descname"><span class="pre">detect_format</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/annotation.html#detect_format"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.annotation.detect_format" title="Link to this definition"></a></dt>
+<dd><p>Return ‘gff3’ or ‘gtf’ based on file extension and content.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.annotation.load_annotation">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.annotation.</span></span><span class="sig-name descname"><span class="pre">load_annotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">features</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/annotation.html#load_annotation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.annotation.load_annotation" title="Link to this definition"></a></dt>
+<dd><p>Load all annotation records, optionally filtered to specific feature types.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p></li>
+<li><p><strong>features</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>] </em><em>| </em><em>None</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference internal" href="#genoprobe.annotation.AnnotationRecord" title="genoprobe.annotation.AnnotationRecord"><em>AnnotationRecord</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.annotation.summarize_annotation">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.annotation.</span></span><span class="sig-name descname"><span class="pre">summarize_annotation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">records</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/annotation.html#summarize_annotation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.annotation.summarize_annotation" title="Link to this definition"></a></dt>
+<dd><p>Return feature type → count mapping for a list of records.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>records</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.annotation.AnnotationRecord" title="genoprobe.annotation.AnnotationRecord"><em>AnnotationRecord</em></a><em>]</em>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.matching">
+<span id="genoprobe-matching"></span><h2><a class="toc-backref" href="#id5" role="doc-backlink">genoprobe.matching</a><a class="headerlink" href="#module-genoprobe.matching" title="Link to this heading"></a></h2>
+<p>Pure-Python mismatch-tolerant sequence matching for off-target screening.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchHit">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">MatchHit</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">subject_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">position</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mismatches</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">strand</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#MatchHit"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.MatchHit" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>subject_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>position</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>mismatches</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>strand</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchHit.subject_name">
+<span class="sig-name descname"><span class="pre">subject_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchHit.subject_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchHit.position">
+<span class="sig-name descname"><span class="pre">position</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchHit.position" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchHit.mismatches">
+<span class="sig-name descname"><span class="pre">mismatches</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchHit.mismatches" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchHit.strand">
+<span class="sig-name descname"><span class="pre">strand</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchHit.strand" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">MatchSummary</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query:</span> <span class="pre">'str'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">on_target_hits:</span> <span class="pre">'list[MatchHit]'</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">off_target_hits:</span> <span class="pre">'list[MatchHit]'</span> <span class="pre">=</span> <span class="pre">&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#MatchSummary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.MatchSummary" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>on_target_hits</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.matching.MatchHit" title="genoprobe.matching.MatchHit"><em>MatchHit</em></a><em>]</em>)</p></li>
+<li><p><strong>off_target_hits</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.matching.MatchHit" title="genoprobe.matching.MatchHit"><em>MatchHit</em></a><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary.query">
+<span class="sig-name descname"><span class="pre">query</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchSummary.query" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary.on_target_hits">
+<span class="sig-name descname"><span class="pre">on_target_hits</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#genoprobe.matching.MatchHit" title="genoprobe.matching.MatchHit"><span class="pre">MatchHit</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#genoprobe.matching.MatchSummary.on_target_hits" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary.off_target_hits">
+<span class="sig-name descname"><span class="pre">off_target_hits</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#genoprobe.matching.MatchHit" title="genoprobe.matching.MatchHit"><span class="pre">MatchHit</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#genoprobe.matching.MatchSummary.off_target_hits" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary.on_target_score">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">on_target_score</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchSummary.on_target_score" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.matching.MatchSummary.off_target_score">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">off_target_score</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><a class="headerlink" href="#genoprobe.matching.MatchSummary.off_target_score" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.matching.reverse_complement">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">reverse_complement</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">seq</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#reverse_complement"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.reverse_complement" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>seq</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.matching.count_mismatches">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">count_mismatches</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_window</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#count_mismatches"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.count_mismatches" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>subject_window</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.matching.find_hits">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">find_hits</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">query</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subject_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_mismatches</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">2</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#find_hits"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.find_hits" title="Link to this definition"></a></dt>
+<dd><p>Find all approximate matches of query in subject (both strands).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>query</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>subject</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>subject_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>max_mismatches</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference internal" href="#genoprobe.matching.MatchHit" title="genoprobe.matching.MatchHit"><em>MatchHit</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.matching.mismatch_support">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.matching.</span></span><span class="sig-name descname"><span class="pre">mismatch_support</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mismatches</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">penalty_per</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/matching.html#mismatch_support"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.matching.mismatch_support" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>mismatches</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>penalty_per</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)">float</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.panels">
+<span id="genoprobe-panels"></span><h2><a class="toc-backref" href="#id6" role="doc-backlink">genoprobe.panels</a><a class="headerlink" href="#module-genoprobe.panels" title="Link to this heading"></a></h2>
+<p>Final probe selection and panel assembly.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.panels.</span></span><span class="sig-name descname"><span class="pre">PanelConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">max_probes_per_target</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">50</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_panel_contiguous_complementarity</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'int</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">7</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_panel_heterodimer_tm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float</span> <span class="pre">|</span> <span class="pre">None'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">panel_complementarity_penalty_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.15</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">panel_heterodimer_penalty_weight</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'float'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.0</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/panels.html#PanelConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.panels.PanelConfig" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>max_probes_per_target</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>max_panel_contiguous_complementarity</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>max_panel_heterodimer_tm</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a><em> | </em><em>None</em>)</p></li>
+<li><p><strong>panel_complementarity_penalty_weight</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+<li><p><strong>panel_heterodimer_penalty_weight</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><em>float</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig.max_probes_per_target">
+<span class="sig-name descname"><span class="pre">max_probes_per_target</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">50</span></em><a class="headerlink" href="#genoprobe.panels.PanelConfig.max_probes_per_target" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig.max_panel_contiguous_complementarity">
+<span class="sig-name descname"><span class="pre">max_panel_contiguous_complementarity</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">7</span></em><a class="headerlink" href="#genoprobe.panels.PanelConfig.max_panel_contiguous_complementarity" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig.max_panel_heterodimer_tm">
+<span class="sig-name descname"><span class="pre">max_panel_heterodimer_tm</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/constants.html#None" title="(in Python v3.14)"><span class="pre">None</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">None</span></em><a class="headerlink" href="#genoprobe.panels.PanelConfig.max_panel_heterodimer_tm" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig.panel_complementarity_penalty_weight">
+<span class="sig-name descname"><span class="pre">panel_complementarity_penalty_weight</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.15</span></em><a class="headerlink" href="#genoprobe.panels.PanelConfig.panel_complementarity_penalty_weight" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelConfig.panel_heterodimer_penalty_weight">
+<span class="sig-name descname"><span class="pre">panel_heterodimer_penalty_weight</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#float" title="(in Python v3.14)"><span class="pre">float</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">0.0</span></em><a class="headerlink" href="#genoprobe.panels.PanelConfig.panel_heterodimer_penalty_weight" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">genoprobe.panels.</span></span><span class="sig-name descname"><span class="pre">PanelResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">target_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'str'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">selected_probes</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'list[ProbeCandidate]'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'PanelConfig'</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">screened</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="s"><span class="pre">'bool'</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/panels.html#PanelResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.panels.PanelResult" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.14)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>target_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>selected_probes</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.probes.ProbeCandidate" title="genoprobe.probes.ProbeCandidate"><em>ProbeCandidate</em></a><em>]</em>)</p></li>
+<li><p><strong>config</strong> (<a class="reference internal" href="#genoprobe.panels.PanelConfig" title="genoprobe.panels.PanelConfig"><em>PanelConfig</em></a>)</p></li>
+<li><p><strong>screened</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><em>bool</em></a>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult.target_name">
+<span class="sig-name descname"><span class="pre">target_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><span class="pre">str</span></a></em><a class="headerlink" href="#genoprobe.panels.PanelResult.target_name" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult.selected_probes">
+<span class="sig-name descname"><span class="pre">selected_probes</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><span class="pre">list</span></a><span class="p"><span class="pre">[</span></span><a class="reference internal" href="#genoprobe.probes.ProbeCandidate" title="genoprobe.probes.ProbeCandidate"><span class="pre">ProbeCandidate</span></a><span class="p"><span class="pre">]</span></span></em><a class="headerlink" href="#genoprobe.panels.PanelResult.selected_probes" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult.config">
+<span class="sig-name descname"><span class="pre">config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference internal" href="#genoprobe.panels.PanelConfig" title="genoprobe.panels.PanelConfig"><span class="pre">PanelConfig</span></a></em><a class="headerlink" href="#genoprobe.panels.PanelResult.config" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult.screened">
+<span class="sig-name descname"><span class="pre">screened</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#bool" title="(in Python v3.14)"><span class="pre">bool</span></a></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em><a class="headerlink" href="#genoprobe.panels.PanelResult.screened" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py property">
+<dt class="sig sig-object py" id="genoprobe.panels.PanelResult.probe_count">
+<em class="property"><span class="k"><span class="pre">property</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">probe_count</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><span class="pre">int</span></a></em><a class="headerlink" href="#genoprobe.panels.PanelResult.probe_count" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.panels.assemble_panel">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.panels.</span></span><span class="sig-name descname"><span class="pre">assemble_panel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">candidates</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/panels.html#assemble_panel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.panels.assemble_panel" title="Link to this definition"></a></dt>
+<dd><p>Greedy panel assembly: iteratively add highest-scoring non-penalised probes.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>candidates</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference internal" href="#genoprobe.probes.ProbeCandidate" title="genoprobe.probes.ProbeCandidate"><em>ProbeCandidate</em></a><em>]</em>)</p></li>
+<li><p><strong>target_name</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>config</strong> (<a class="reference internal" href="#genoprobe.panels.PanelConfig" title="genoprobe.panels.PanelConfig"><em>PanelConfig</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference internal" href="#genoprobe.panels.PanelResult" title="genoprobe.panels.PanelResult"><em>PanelResult</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.indexing">
+<span id="genoprobe-indexing"></span><h2><a class="toc-backref" href="#id7" role="doc-backlink">genoprobe.indexing</a><a class="headerlink" href="#module-genoprobe.indexing" title="Link to this heading"></a></h2>
+<p>Optional Fulgor-based off-target index management.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.indexing.find_fulgor">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.indexing.</span></span><span class="sig-name descname"><span class="pre">find_fulgor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/indexing.html#find_fulgor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.indexing.find_fulgor" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.indexing.find_ggcat">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.indexing.</span></span><span class="sig-name descname"><span class="pre">find_ggcat</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/indexing.html#find_ggcat"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.indexing.find_ggcat" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.indexing.require_fulgor">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.indexing.</span></span><span class="sig-name descname"><span class="pre">require_fulgor</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/indexing.html#require_fulgor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.indexing.require_fulgor" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.indexing.build_fulgor_index">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.indexing.</span></span><span class="sig-name descname"><span class="pre">build_fulgor_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fasta_paths</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output_dir</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">kmer_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">31</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">minimizer_length</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">20</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/indexing.html#build_fulgor_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.indexing.build_fulgor_index" title="Link to this definition"></a></dt>
+<dd><p>Build a Fulgor index from a list of FASTA files. Returns the index path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fasta_paths</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a><em>]</em>)</p></li>
+<li><p><strong>output_dir</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p></li>
+<li><p><strong>kmer_length</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>minimizer_length</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+<li><p><strong>threads</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.indexing.query_fulgor_index">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.indexing.</span></span><span class="sig-name descname"><span class="pre">query_fulgor_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">probe_sequences</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">threads</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">4</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/indexing.html#query_fulgor_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.indexing.query_fulgor_index" title="Link to this definition"></a></dt>
+<dd><p>Query a Fulgor index with probe sequences. Returns probe → list of genome indices.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>index_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p></li>
+<li><p><strong>probe_sequences</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)"><em>list</em></a><em>[</em><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em>]</em>)</p></li>
+<li><p><strong>threads</strong> (<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)"><em>int</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.14)">list</a>[<a class="reference external" href="https://docs.python.org/3/library/functions.html#int" title="(in Python v3.14)">int</a>]]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.paths">
+<span id="genoprobe-paths"></span><h2><a class="toc-backref" href="#id8" role="doc-backlink">genoprobe.paths</a><a class="headerlink" href="#module-genoprobe.paths" title="Link to this heading"></a></h2>
+<p>Output path management for genoprobe.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.resolve_output_root">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">resolve_output_root</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#resolve_output_root"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.resolve_output_root" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a><em> | </em><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.targets_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">targets_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#targets_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.targets_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.probes_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">probes_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#probes_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.probes_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.screen_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">screen_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#screen_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.screen_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.panels_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">panels_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#panels_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.panels_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.index_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">index_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#index_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.index_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>output</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.paths.ensure_dir">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.paths.</span></span><span class="sig-name descname"><span class="pre">ensure_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/paths.html#ensure_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.paths.ensure_dir" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>path</strong> (<a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/pathlib.html#pathlib.Path" title="(in Python v3.14)"><em>Path</em></a></p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+<section id="module-genoprobe.profile_defaults">
+<span id="genoprobe-profile-defaults"></span><h2><a class="toc-backref" href="#id9" role="doc-backlink">genoprobe.profile_defaults</a><a class="headerlink" href="#module-genoprobe.profile_defaults" title="Link to this heading"></a></h2>
+<p>Load bundled stage-profile defaults.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.profile_defaults.load_profile_catalog">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.profile_defaults.</span></span><span class="sig-name descname"><span class="pre">load_profile_catalog</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/profile_defaults.html#load_profile_catalog"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.profile_defaults.load_profile_catalog" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><em>Any</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.profile_defaults.get_stage_default_profile">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.profile_defaults.</span></span><span class="sig-name descname"><span class="pre">get_stage_default_profile</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stage</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/profile_defaults.html#get_stage_default_profile"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.profile_defaults.get_stage_default_profile" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>stage</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.profile_defaults.get_stage_profile_names">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.profile_defaults.</span></span><span class="sig-name descname"><span class="pre">get_stage_profile_names</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stage</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/profile_defaults.html#get_stage_profile_names"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.profile_defaults.get_stage_profile_names" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>stage</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#tuple" title="(in Python v3.14)">tuple</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, …]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="genoprobe.profile_defaults.get_stage_profile_defaults">
+<span class="sig-prename descclassname"><span class="pre">genoprobe.profile_defaults.</span></span><span class="sig-name descname"><span class="pre">get_stage_profile_defaults</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">stage</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">profile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/genoprobe/profile_defaults.html#get_stage_profile_defaults"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#genoprobe.profile_defaults.get_stage_profile_defaults" title="Link to this definition"></a></dt>
+<dd><dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>stage</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+<li><p><strong>profile</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)"><em>str</em></a>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#dict" title="(in Python v3.14)">dict</a>[<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.14)">str</a>, <a class="reference external" href="https://docs.python.org/3/library/typing.html#typing.Any" title="(in Python v3.14)"><em>Any</em></a>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../thermodynamics.html" class="btn btn-neutral float-left" title="Thermodynamics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Antton Alberdi.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
