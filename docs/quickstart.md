@@ -69,13 +69,33 @@ Output files written to `my_run/probes/<genome>/`:
 
 ### 3. Screen for off-target binding
 
-Filter candidates against the full genome:
+Filter candidates against all project genomes. No genome FASTA is required — the
+target sequences written by the `targets` step are loaded automatically:
 
 ```bash
 genoprobe screen \
-    --genomes genome.fa \
     --output my_run/ \
     --profile balanced
+```
+
+To also screen against genomes outside the project:
+
+```bash
+genoprobe screen \
+    --output my_run/ \
+    --external outgroup.fa \
+    --profile balanced
+```
+
+To restrict cross-genome screening to a subset of project genomes, use `--include`
+(whitelist) or `--exclude` (blacklist):
+
+```bash
+# only screen against genomeA and genomeB from the project
+genoprobe screen --output my_run/ --include genomeA,genomeB
+
+# skip genomeC from the project
+genoprobe screen --output my_run/ --exclude genomeC
 ```
 
 Output files written to `my_run/screen/<genome>/`:
@@ -115,7 +135,7 @@ genoprobe targets \
     --output tiling_run/
 
 genoprobe probes --output tiling_run/
-genoprobe screen --genomes genome.fa --output tiling_run/
+genoprobe screen --output tiling_run/
 genoprobe panels --output tiling_run/
 ```
 

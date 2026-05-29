@@ -6,6 +6,21 @@
 
 - No unreleased changes yet.
 
+## [0.2.0] - 2026-05-29
+
+### Changed
+
+- `screen` command: `--genomes / -g` removed. Project genomes are now loaded automatically from `<output>/targets/<name>/<name>_targets.fa` — no FASTA paths need to be supplied at the screening stage.
+- `screen` command: analysis mode (`gene` or `genome`) is read automatically from `<name>_targets_summary.json` written by `genoprobe targets`, so there is no need to specify it again.
+- `screen` command: on-target hit classification in **gene mode** now uses sequence-name matching — a hit is on-target only when it falls on the probe's specific target gene sequence, not merely within any gene interval of the focal genome. This correctly treats hits to other genes in the same genome as off-target.
+- `screen` command: in both modes, all other project genomes (their `targets.fa` files) are screened against by default. In gene mode this is gene-vs-gene; in genome mode it is genome-vs-genome (since `targets.fa` contains full chromosome sequences in that mode).
+
+### Added
+
+- `screen` command: `--external / -x FASTA [...]` — optional list of genome FASTA files from outside the project for additional off-target screening. Replaces the old required `--genomes` flag.
+- `screen` command: `--include / -i NAMES` — comma-separated list of project genome names to include in cross-genome off-target screening. When set, only these project genomes are used (the focal genome is always included regardless).
+- `screen` command: `--exclude / -e NAMES` — comma-separated list of project genome names to skip during cross-genome off-target screening.
+
 ## [0.1.4] - 2026-05-29
 
 ### Added

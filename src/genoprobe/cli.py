@@ -6,6 +6,7 @@ import argparse
 from collections.abc import Sequence
 import csv
 import json
+import lzma
 from pathlib import Path
 import sys
 from typing import Any
@@ -115,6 +116,22 @@ def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
         writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()), delimiter="\t")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _write_tsv_xz(path: Path, rows: list[dict[str, Any]]) -> None:
+    with lzma.open(path, "wt", encoding="utf-8") as fh:
+        if not rows:
+            return
+        writer = csv.DictWriter(fh, fieldnames=list(rows[0].keys()), delimiter="\t")
+        writer.writeheader()
+        writer.writerows(rows)
+
+
+def _open_tsv(path: Path):
+    """Open a plain or xz-compressed TSV for reading."""
+    if path.suffix == ".xz":
+        return lzma.open(path, "rt", encoding="utf-8")
+    return path.open(encoding="utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +337,10 @@ def cmd_targets(args: argparse.Namespace) -> int:
                 "Add an 'annotations' column to your targets file."
             )
         out_dir = ensure_dir(base_targets / name)
+        sentinel = out_dir / f"{name}_targets.fa"
+        if not args.overwrite and sentinel.exists():
+            _print(f"  [{name}] Skipping (outputs exist; use --overwrite to redo).")
+            continue
         _print(f"  [{name}] genome={genome_path}  annotation={annotation_path or '—'}")
 
         records = _run_targets(
@@ -337,8 +358,24 @@ def cmd_targets(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Shared helper
+# Shared helpers
 # ---------------------------------------------------------------------------
+
+def _read_project_mode(base_targets: Path, names: list[str]) -> str:
+    """Read analysis mode from the first available targets summary JSON.
+
+    Falls back to 'genome' when the file is absent or lacks a mode field.
+    """
+    for name in names:
+        summary_path = base_targets / name / f"{name}_targets_summary.json"
+        if summary_path.exists():
+            try:
+                data = json.loads(summary_path.read_text(encoding="utf-8"))
+                return data.get("mode", "genome")
+            except (json.JSONDecodeError, OSError):
+                pass
+    return "genome"
+
 
 def _discover_names(stage_dir: Path, stage_label: str) -> list[str]:
     """Return sorted genome names from per-name subdirs within a stage directory."""
@@ -383,10 +420,6 @@ def _process_genome_probes(
     for target_name in fasta.keys():
         seq = str(fasta[target_name])
         candidates, stats = generate_candidates(seq, target_name, config)
-        log.append(
-            f"    [{name}] '{target_name}' ({len(seq)} bp)"
-            f" → {stats['accepted']} candidates from {stats['windows_examined']} windows"
-        )
         target_counts[target_name] = len(candidates)
         for c in candidates:
             all_rows.append({
@@ -405,7 +438,7 @@ def _process_genome_probes(
                 "score": round(c.score, 4),
             })
 
-    _write_tsv(out_dir / f"{name}_candidates.tsv", all_rows)
+    _write_tsv_xz(out_dir / f"{name}_candidates.tsv.xz", all_rows)
     (out_dir / f"{name}_probes_summary.json").write_text(
         json.dumps({"name": name, "total_candidates": len(all_rows), "per_target": target_counts}, indent=2),
         encoding="utf-8",
@@ -450,8 +483,16 @@ def cmd_probes(args: argparse.Namespace) -> int:
     workers = resolve_worker_count(args.workers)
     _print(f"[genoprobe probes] profile={args.profile or 'balanced'}  workers={workers}  genomes={len(names)}")
 
-    if workers <= 1 or len(names) <= 1:
-        for name in names:
+    names_to_run: list[str] = []
+    for name in names:
+        sentinel = base_probes / name / f"{name}_candidates.tsv.xz"
+        if not args.overwrite and sentinel.exists():
+            _print(f"  [{name}] Skipping (outputs exist; use --overwrite to redo).")
+        else:
+            names_to_run.append(name)
+
+    if workers <= 1 or len(names_to_run) <= 1:
+        for name in names_to_run:
             _, log_lines, _ = _process_genome_probes(name, base_targets, base_probes, config)
             for line in log_lines:
                 _print(line)
@@ -460,7 +501,7 @@ def cmd_probes(args: argparse.Namespace) -> int:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             futures = {
                 pool.submit(_process_genome_probes, name, base_targets, base_probes, config): name
-                for name in names
+                for name in names_to_run
             }
             for future in as_completed(futures):
                 _, log_lines, _ = future.result()
@@ -489,35 +530,96 @@ def cmd_screen(args: argparse.Namespace) -> int:
     offtarget_pw = profile["offtarget_penalty_weight"]
     min_ontarget = profile["min_ontarget_fraction"]
 
-    _print(f"[genoprobe screen] profile={args.profile or 'balanced'}  max_mismatches={max_mm}  genomes={len(names)}")
+    # Mode is recorded in the targets summary written by genoprobe targets.
+    mode = _read_project_mode(base_targets, names)
 
-    genome_records = load_genomes(args.genomes)
-    _print(f"  Loaded {len(genome_records)} genome sequences for off-target screening.")
+    # Determine which project genomes participate in off-target screening.
+    all_project_names = _discover_names(base_targets, "targets")
+    include_set: set[str] | None = None
+    exclude_set: set[str] = set()
+    if getattr(args, "include", None):
+        include_set = {n.strip() for n in args.include.split(",")}
+    if getattr(args, "exclude", None):
+        exclude_set = {n.strip() for n in args.exclude.split(",")}
+    if include_set is not None:
+        screened_project_names = set(include_set) & set(all_project_names)
+    else:
+        screened_project_names = set(all_project_names) - exclude_set
 
+    # Pre-load target sequences for project genomes in the screening set.
+    # In gene mode, targets.fa holds per-gene sequences; in genome mode it holds
+    # full chromosome/contig sequences — so the same file serves both modes.
+    project_records: dict[str, list] = {}
+    for pname in screened_project_names:
+        fa = base_targets / pname / f"{pname}_targets.fa"
+        if fa.exists():
+            project_records[pname] = load_genomes([fa])
+
+    # Load external genomes (optional, outside the project).
+    external_records = []
+    if getattr(args, "external", None):
+        external_records = load_genomes(args.external)
+        _print(f"  Loaded {len(external_records)} external genome sequences.")
+
+    _print(
+        f"[genoprobe screen] mode={mode}  profile={args.profile or 'balanced'}  "
+        f"max_mismatches={max_mm}  project_genomes={len(project_records)}  "
+        f"external_sequences={len(external_records)}"
+    )
+
+    # Build k-mer index once from all screening sequences (project + external).
     kmer_index: dict[str, int] = {}
     if max_kmer is not None:
-        _print(f"  Building k-mer index (k=18)...")
-        kmer_index = build_kmer_index(genome_records, k=18)
+        _print("  Building k-mer index (k=18)...")
+        kmer_all: list = list(external_records)
+        for recs in project_records.values():
+            kmer_all.extend(recs)
+        # Focal genomes not in screened_project_names still need coverage.
+        for n in names:
+            if n not in project_records:
+                fa = base_targets / n / f"{n}_targets.fa"
+                if fa.exists():
+                    kmer_all.extend(load_genomes([fa]))
+        kmer_index = build_kmer_index(kmer_all, k=18)
 
     for name in names:
-        candidates_path = base_probes / name / f"{name}_candidates.tsv"
+        candidates_path = base_probes / name / f"{name}_candidates.tsv.xz"
         if not candidates_path.exists():
             _print(f"  [{name}] WARNING: {candidates_path.name} not found, skipping.")
             continue
 
         targets_bed = base_targets / name / f"{name}_targets.bed"
         out_dir = ensure_dir(base_screen / name)
+        sentinel = out_dir / f"{name}_screened.tsv"
+        if not args.overwrite and sentinel.exists():
+            _print(f"  [{name}] Skipping (outputs exist; use --overwrite to redo).")
+            continue
 
-        with candidates_path.open(encoding="utf-8") as fh:
+        with _open_tsv(candidates_path) as fh:
             candidates = list(csv.DictReader(fh, delimiter="\t"))
 
+        # Genome mode uses BED coordinates to classify on-target hits in the
+        # focal genome; everything outside those intervals is off-target.
         target_intervals: dict[str, list[tuple[int, int]]] = {}
-        if targets_bed.exists():
+        if mode == "genome" and targets_bed.exists():
             for line in targets_bed.read_text().splitlines():
                 parts = line.split("\t")
                 if len(parts) >= 4:
                     seqid, start, end = parts[0], int(parts[1]), int(parts[2])
                     target_intervals.setdefault(seqid, []).append((start, end))
+
+        # Focal genome's own target sequences (always included regardless of
+        # include/exclude, since on-target hits must be detectable).
+        focal_fa = base_targets / name / f"{name}_targets.fa"
+        focal_recs = project_records.get(name) or (load_genomes([focal_fa]) if focal_fa.exists() else [])
+
+        # Other project genomes in the screening set.
+        other_recs = []
+        for pname, recs in project_records.items():
+            if pname != name:
+                other_recs.extend(recs)
+
+        genome_records = focal_recs + other_recs + external_records
 
         screened_rows: list[dict[str, Any]] = []
         target_passing: dict[str, int] = {}
@@ -535,8 +637,13 @@ def cmd_screen(args: argparse.Namespace) -> int:
             for grec in genome_records:
                 hits = find_hits(seq, grec.sequence, grec.name, max_mismatches=max_mm)
                 for hit in hits:
-                    intervals = target_intervals.get(grec.name, [])
-                    is_on = any(s <= hit.position <= e for s, e in intervals)
+                    if mode == "gene":
+                        # On-target only when the sequence name matches the
+                        # probe's specific target gene.
+                        is_on = (grec.name == target_name)
+                    else:
+                        intervals = target_intervals.get(grec.name, [])
+                        is_on = any(s <= hit.position <= e for s, e in intervals)
                     (on_hits if is_on else off_hits).append(hit)
 
             summary = MatchSummary(query=seq, on_target_hits=on_hits, off_target_hits=off_hits)
@@ -594,7 +701,7 @@ def cmd_panels(args: argparse.Namespace) -> int:
     for name in names:
         # Prefer screened candidates; fall back to raw candidates
         screened_path = screen_dir(output) / name / f"{name}_screened.tsv"
-        candidates_path = base_probes / name / f"{name}_candidates.tsv"
+        candidates_path = base_probes / name / f"{name}_candidates.tsv.xz"
 
         if screened_path.exists():
             source_path = screened_path
@@ -607,9 +714,13 @@ def cmd_panels(args: argparse.Namespace) -> int:
             continue
 
         out_dir = ensure_dir(panels_dir(output) / name)
+        sentinel = out_dir / f"{name}_final_probes.tsv"
+        if not args.overwrite and sentinel.exists():
+            _print(f"  [{name}] Skipping (outputs exist; use --overwrite to redo).")
+            continue
         _print(f"  [{name}] source={source_label}")
 
-        with source_path.open(encoding="utf-8") as fh:
+        with _open_tsv(source_path) as fh:
             all_candidates = list(csv.DictReader(fh, delimiter="\t"))
 
         by_target: dict[str, list[dict[str, Any]]] = {}
@@ -677,6 +788,10 @@ def cmd_index(args: argparse.Namespace) -> int:
         _die("Fulgor not found on PATH. Install Fulgor before running 'genoprobe index'.")
     output = resolve_output_root(args.output)
     out_dir = ensure_dir(index_dir(output))
+    sentinel = out_dir / "index.fur"
+    if not args.overwrite and sentinel.exists():
+        _print(f"[genoprobe index] Skipping (index exists at {sentinel}; use --overwrite to redo).")
+        return 0
     fasta_paths = [Path(p) for p in args.genomes]
     _print(f"[genoprobe index] Building Fulgor index from {len(fasta_paths)} FASTA file(s)...")
     index_path = build_fulgor_index(
@@ -713,6 +828,12 @@ def _build_parser() -> argparse.ArgumentParser:
         p.add_argument(
             "--output", "-o", required=True, metavar="DIR",
             help="Output directory.",
+        )
+
+    def _add_overwrite(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--overwrite", action="store_true", default=False,
+            help="Overwrite existing output files (default: skip if outputs already exist).",
         )
 
     def _add_profile(p: argparse.ArgumentParser, stage: str) -> None:
@@ -764,6 +885,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--feature", nargs="+", metavar="TYPE",
         help="Filter gene mode to specific feature types (e.g. gene CDS exon).",
     )
+    _add_overwrite(p_targets)
     p_targets.set_defaults(func=cmd_targets)
 
     # ---- probes ------------------------------------------------------------
@@ -793,20 +915,42 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"Total strand concentration nM (default: {DEFAULT_PROBE_CONC_NM}).")
     p_probes.add_argument("--formamide", type=float, default=None, metavar="PCT",
         help=f"Formamide %% for Tm correction (default: {DEFAULT_FORMAMIDE_PCT}).")
+    _add_overwrite(p_probes)
     p_probes.set_defaults(func=cmd_probes)
 
     # ---- screen ------------------------------------------------------------
     p_screen = sub.add_parser("screen", help="Off-target screen probe candidates.")
-    _add_genomes(p_screen)
     _add_output(p_screen)
     _add_profile(p_screen, "screen")
     _add_workers(p_screen)
+    p_screen.add_argument(
+        "--external", "-x", nargs="+", default=None, metavar="FASTA",
+        help=(
+            "External genome FASTA files to screen against in addition to project genomes. "
+            "Use for genomes outside the current project."
+        ),
+    )
+    p_screen.add_argument(
+        "--include", "-i", metavar="NAMES",
+        help=(
+            "Comma-separated project genome names to include in off-target screening. "
+            "When set, only these project genomes are used (always from within the project)."
+        ),
+    )
+    p_screen.add_argument(
+        "--exclude", "-e", metavar="NAMES",
+        help=(
+            "Comma-separated project genome names to skip during off-target screening. "
+            "Mutually exclusive with --include."
+        ),
+    )
     p_screen.add_argument("--max-mismatches", type=int, default=None, metavar="N",
         help=f"Max mismatches for off-target hit (default: {DEFAULT_MAX_MISMATCHES}).")
     p_screen.add_argument("--max-kmer-frequency", type=int, default=None, metavar="N",
         help="Discard probes where any 18-mer exceeds this genome frequency.")
     p_screen.add_argument("--index", metavar="DIR",
         help="Fulgor index directory for secondary off-target screening.")
+    _add_overwrite(p_screen)
     p_screen.set_defaults(func=cmd_screen)
 
     # ---- panels ------------------------------------------------------------
@@ -815,6 +959,7 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_profile(p_panels, "panels")
     p_panels.add_argument("--max-probes", type=int, default=None, metavar="N",
         help=f"Max probes per target (default: {DEFAULT_MAX_PROBES_PER_TARGET}).")
+    _add_overwrite(p_panels)
     p_panels.set_defaults(func=cmd_panels)
 
     # ---- index -------------------------------------------------------------
@@ -827,6 +972,7 @@ def _build_parser() -> argparse.ArgumentParser:
         help=f"Minimizer length (default: {DEFAULT_MINIMIZER_LENGTH}).")
     p_index.add_argument("--threads", type=int, default=None, metavar="N",
         help=f"Threads for Fulgor (default: {DEFAULT_FULGOR_THREADS}).")
+    _add_overwrite(p_index)
     p_index.set_defaults(func=cmd_index)
 
     return parser
