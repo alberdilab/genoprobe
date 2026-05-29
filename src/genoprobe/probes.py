@@ -144,12 +144,32 @@ def generate_candidates(
     sequence: str,
     target_name: str,
     config: ProbeDesignConfig,
-) -> list[ProbeCandidate]:
-    """Sliding-window probe candidate generation with thermodynamic filtering."""
+) -> tuple[list[ProbeCandidate], dict[str, int]]:
+    """Sliding-window probe candidate generation with thermodynamic filtering.
+
+    Returns a tuple of (candidates, filter_stats) where filter_stats records
+    how many windows were rejected at each filter stage.
+    """
     sequence = sequence.upper()
     n = len(sequence)
     candidates: list[ProbeCandidate] = []
     last_accepted_end: int = -1
+
+    stats: dict[str, int] = {
+        "windows_examined": 0,
+        "fail_n_base": 0,
+        "fail_prohibited": 0,
+        "fail_gc": 0,
+        "fail_homopolymer": 0,
+        "fail_dinucleotide": 0,
+        "fail_tm": 0,
+        "fail_entropy": 0,
+        "fail_self_complementarity": 0,
+        "fail_hairpin": 0,
+        "fail_homodimer": 0,
+        "fail_spacing": 0,
+        "accepted": 0,
+    }
 
     for start in range(n):
         for probe_len in range(config.min_probe_length, config.max_probe_length + 1):
@@ -158,53 +178,66 @@ def generate_candidates(
                 break
 
             seq = sequence[start:end]
+            stats["windows_examined"] += 1
 
             # Hard filters — cheap checks first
             if "N" in seq:
+                stats["fail_n_base"] += 1
                 break
             if any(p in seq for p in config.prohibited_sequences):
+                stats["fail_prohibited"] += 1
                 continue
 
             gc = gc_content(seq) * 100.0
             if gc < config.min_gc or gc > config.max_gc:
+                stats["fail_gc"] += 1
                 continue
 
             if _max_homopolymer(seq) > config.max_homopolymer_run:
+                stats["fail_homopolymer"] += 1
                 continue
 
             if config.max_dinucleotide_run is not None:
                 if _max_dinucleotide_run(seq) > config.max_dinucleotide_run:
+                    stats["fail_dinucleotide"] += 1
                     continue
 
             # Thermodynamic calculations
             tm = calc_tm(seq, config.thermo_backend, config.monovalent_mm, config.probe_conc_nm, config.formamide_pct)
             if tm < config.min_tm or tm > config.max_tm:
+                stats["fail_tm"] += 1
                 continue
 
             entropy = sequence_entropy(seq)
             if config.min_sequence_entropy is not None and entropy < config.min_sequence_entropy:
+                stats["fail_entropy"] += 1
                 continue
 
             sc_total, sc_run = self_complementarity(seq)
             if config.max_self_complementarity is not None and sc_total > config.max_self_complementarity:
+                stats["fail_self_complementarity"] += 1
                 continue
             if (
                 config.max_contiguous_self_complementarity is not None
                 and sc_run > config.max_contiguous_self_complementarity
             ):
+                stats["fail_self_complementarity"] += 1
                 continue
 
             h_tm = hairpin_tm(seq, config.monovalent_mm, config.probe_conc_nm)
             if config.max_hairpin_tm is not None and h_tm > config.max_hairpin_tm:
+                stats["fail_hairpin"] += 1
                 continue
 
             hd_tm = homodimer_tm(seq, config.monovalent_mm, config.probe_conc_nm)
             if config.max_homodimer_tm is not None and hd_tm > config.max_homodimer_tm:
+                stats["fail_homodimer"] += 1
                 continue
 
             # Spacing filter
             if config.probe_spacing > 0 and last_accepted_end > 0:
                 if start < last_accepted_end + config.probe_spacing:
+                    stats["fail_spacing"] += 1
                     continue
 
             candidate = ProbeCandidate(
@@ -223,7 +256,8 @@ def generate_candidates(
             candidate.score = _score_probe(candidate, config)
             candidates.append(candidate)
             last_accepted_end = end
+            stats["accepted"] += 1
             # Accept the first passing length for this start position
             break
 
-    return sorted(candidates, key=lambda c: c.score, reverse=True)
+    return sorted(candidates, key=lambda c: c.score, reverse=True), stats

@@ -42,13 +42,13 @@ genoprobe targets \
     --output my_run/
 ```
 
-Output files written to `my_run/targets/`:
+Output files written to `my_run/targets/<genome>/`:
 
 | File | Description |
 |------|-------------|
-| `targets.fa` | Target sequences in FASTA format |
-| `targets.bed` | Genomic coordinates of each target |
-| `targets_summary.json` | Target count summary |
+| `<genome>_targets.fa` | Target sequences in FASTA format |
+| `<genome>_targets.bed` | Genomic coordinates of each target |
+| `<genome>_targets_summary.json` | Target count summary |
 
 ### 2. Generate probe candidates
 
@@ -60,12 +60,12 @@ genoprobe probes \
     --profile balanced
 ```
 
-Output files written to `my_run/probes/`:
+Output files written to `my_run/probes/<genome>/`:
 
 | File | Description |
 |------|-------------|
-| `candidates.tsv` | All probes passing thermodynamic filters |
-| `probes_summary.json` | Candidate counts per target |
+| `<genome>_candidates.tsv` | All probes passing thermodynamic filters |
+| `<genome>_probes_summary.json` | Candidate counts per target |
 
 ### 3. Screen for off-target binding
 
@@ -78,12 +78,12 @@ genoprobe screen \
     --profile balanced
 ```
 
-Output files written to `my_run/screen/`:
+Output files written to `my_run/screen/<genome>/`:
 
 | File | Description |
 |------|-------------|
-| `screened.tsv` | Candidates with on/off-target hit counts and scores |
-| `screen_summary.json` | Passing counts per target |
+| `<genome>_screened.tsv` | Candidates with on/off-target hit counts and scores |
+| `<genome>_screen_summary.json` | Passing counts per target |
 
 ### 4. Assemble final panels
 
@@ -95,12 +95,12 @@ genoprobe panels \
     --profile balanced
 ```
 
-Output files written to `my_run/panels/`:
+Output files written to `my_run/panels/<genome>/`:
 
 | File | Description |
 |------|-------------|
-| `final_probes.tsv` | Final probe sequences, ready for synthesis |
-| `panels_summary.json` | Probe counts per target |
+| `<genome>_final_probes.tsv` | Final probe sequences, ready for synthesis |
+| `<genome>_panels_summary.json` | Probe counts per target |
 
 ---
 

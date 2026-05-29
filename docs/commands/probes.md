@@ -10,7 +10,7 @@ candidate probes.
 genoprobe probes --output DIR [OPTIONS]
 ```
 
-**Requires:** `targets` has already been run (reads `<output>/targets/targets.fa`).
+**Requires:** `targets` has already been run (reads `<output>/targets/<name>/`).
 
 ## Required arguments
 
@@ -68,16 +68,16 @@ See [Profiles](../profiles.md) for the full parameter tables.
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--workers / -w N` | auto | Number of worker processes. Defaults to `min(CPU_count, 8)`. |
+| `--workers / -w N` | auto | Number of worker processes. Defaults to `min(CPU_count, 4)`. Each genome is processed in a separate worker, so speedup scales with genome count up to `--workers`. |
 
 ## Output files
 
-All outputs are written to `<output>/probes/`.
+All outputs are written to `<output>/probes/<name>/`, where `<name>` matches the genome subfolder created by `targets`.
 
 | File | Description |
 |------|-------------|
-| `candidates.tsv` | Tab-separated table of all candidate probes passing all filters. |
-| `probes_summary.json` | JSON summary: total candidate count and per-target counts. |
+| `<name>_candidates.tsv` | Tab-separated table of all candidate probes passing all filters. |
+| `<name>_probes_summary.json` | JSON summary: total candidate count and per-target counts. |
 
 ### `candidates.tsv` columns
 

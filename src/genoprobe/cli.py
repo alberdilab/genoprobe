@@ -68,7 +68,6 @@ from genoprobe.reports import (
     write_panels_report,
     write_probes_report,
     write_screen_report,
-    write_targets_report,
 )
 from genoprobe.thermo import (
     DEFAULT_FORMAMIDE_PCT,
@@ -272,7 +271,6 @@ def _run_targets(
         json.dumps({"name": name, "mode": mode, "target_count": len(target_records)}, indent=2),
         encoding="utf-8",
     )
-    write_targets_report(out_dir, {r["target"]: r["length"] for r in target_records})
 
     return target_records
 
@@ -356,6 +354,68 @@ def _discover_names(stage_dir: Path, stage_label: str) -> list[str]:
 # probes command
 # ---------------------------------------------------------------------------
 
+def _process_genome_probes(
+    name: str,
+    base_targets: Path,
+    base_probes: Path,
+    config: ProbeDesignConfig,
+) -> tuple[str, list[str], int]:
+    """Process one genome's probe candidates. Runs in a worker process.
+
+    Returns (name, log_lines, total_candidates) so the caller can flush
+    output atomically and avoid interleaving across parallel workers.
+    """
+    from pyfaidx import Fasta
+
+    log: list[str] = []
+    targets_path = base_targets / name / f"{name}_targets.fa"
+
+    if not targets_path.exists():
+        log.append(f"  [{name}] WARNING: {targets_path.name} not found, skipping.")
+        return name, log, 0
+
+    out_dir = ensure_dir(base_probes / name)
+    fasta = Fasta(str(targets_path), as_raw=True, sequence_always_upper=True)
+
+    all_rows: list[dict[str, Any]] = []
+    target_counts: dict[str, int] = {}
+
+    for target_name in fasta.keys():
+        seq = str(fasta[target_name])
+        candidates, stats = generate_candidates(seq, target_name, config)
+        log.append(
+            f"    [{name}] '{target_name}' ({len(seq)} bp)"
+            f" → {stats['accepted']} candidates from {stats['windows_examined']} windows"
+        )
+        target_counts[target_name] = len(candidates)
+        for c in candidates:
+            all_rows.append({
+                "target": c.target_name,
+                "start": c.start,
+                "end": c.end,
+                "sequence": c.sequence,
+                "length": c.length,
+                "tm": round(c.tm, 2),
+                "gc": round(c.gc, 2),
+                "entropy": round(c.entropy, 4),
+                "self_comp_total": c.self_comp_total,
+                "self_comp_run": c.self_comp_run,
+                "hairpin_tm": round(c.hairpin_tm, 2),
+                "homodimer_tm": round(c.homodimer_tm, 2),
+                "score": round(c.score, 4),
+            })
+
+    _write_tsv(out_dir / f"{name}_candidates.tsv", all_rows)
+    (out_dir / f"{name}_probes_summary.json").write_text(
+        json.dumps({"name": name, "total_candidates": len(all_rows), "per_target": target_counts}, indent=2),
+        encoding="utf-8",
+    )
+    write_probes_report(out_dir, target_counts)
+    log.append(f"  [{name}] Generated {len(all_rows)} candidates across {len(target_counts)} targets → {out_dir}")
+
+    return name, log, len(all_rows)
+
+
 def cmd_probes(args: argparse.Namespace) -> int:
     """Generate probe candidates from target sequences."""
     output = resolve_output_root(args.output)
@@ -390,48 +450,22 @@ def cmd_probes(args: argparse.Namespace) -> int:
     workers = resolve_worker_count(args.workers)
     _print(f"[genoprobe probes] profile={args.profile or 'balanced'}  workers={workers}  genomes={len(names)}")
 
-    from pyfaidx import Fasta
-
-    for name in names:
-        targets_path = base_targets / name / f"{name}_targets.fa"
-        if not targets_path.exists():
-            _print(f"  [{name}] WARNING: {targets_path.name} not found, skipping.")
-            continue
-
-        out_dir = ensure_dir(base_probes / name)
-        fasta = Fasta(str(targets_path), as_raw=True, sequence_always_upper=True)
-
-        all_rows: list[dict[str, Any]] = []
-        target_counts: dict[str, int] = {}
-
-        for target_name in fasta.keys():
-            seq = str(fasta[target_name])
-            candidates = generate_candidates(seq, target_name, config)
-            target_counts[target_name] = len(candidates)
-            for c in candidates:
-                all_rows.append({
-                    "target": c.target_name,
-                    "start": c.start,
-                    "end": c.end,
-                    "sequence": c.sequence,
-                    "length": c.length,
-                    "tm": round(c.tm, 2),
-                    "gc": round(c.gc, 2),
-                    "entropy": round(c.entropy, 4),
-                    "self_comp_total": c.self_comp_total,
-                    "self_comp_run": c.self_comp_run,
-                    "hairpin_tm": round(c.hairpin_tm, 2),
-                    "homodimer_tm": round(c.homodimer_tm, 2),
-                    "score": round(c.score, 4),
-                })
-
-        _write_tsv(out_dir / f"{name}_candidates.tsv", all_rows)
-        (out_dir / f"{name}_probes_summary.json").write_text(
-            json.dumps({"name": name, "total_candidates": len(all_rows), "per_target": target_counts}, indent=2),
-            encoding="utf-8",
-        )
-        write_probes_report(out_dir, target_counts)
-        _print(f"  [{name}] Generated {len(all_rows)} candidates across {len(target_counts)} targets → {out_dir}")
+    if workers <= 1 or len(names) <= 1:
+        for name in names:
+            _, log_lines, _ = _process_genome_probes(name, base_targets, base_probes, config)
+            for line in log_lines:
+                _print(line)
+    else:
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(_process_genome_probes, name, base_targets, base_probes, config): name
+                for name in names
+            }
+            for future in as_completed(futures):
+                _, log_lines, _ = future.result()
+                for line in log_lines:
+                    _print(line)
 
     return 0
 
