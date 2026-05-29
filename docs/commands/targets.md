@@ -6,15 +6,22 @@ their genomic coordinates.
 
 ## Usage
 
+**Single genome:**
 ```
 genoprobe targets --genomes FASTA [FASTA ...] --output DIR --mode {genome,gene} [OPTIONS]
+```
+
+**Batch (multiple genome-annotation pairs):**
+```
+genoprobe targets --targets-file FILE --output DIR --mode {genome,gene} [OPTIONS]
 ```
 
 ## Required arguments
 
 | Argument | Description |
 |----------|-------------|
-| `--genomes / -g` | One or more genome FASTA files. |
+| `--genomes / -g` | One or more genome FASTA files. Mutually exclusive with `--targets-file`. |
+| `--targets-file / -t` | TSV/CSV batch file of genome-annotation pairs. Mutually exclusive with `--genomes`. |
 | `--output / -o` | Output directory. Sub-directories are created automatically. |
 | `--mode / -m` | `genome` — tile the full genome(s); `gene` — use annotated features. |
 
@@ -45,7 +52,8 @@ genoprobe targets \
 ## Mode: `gene`
 
 Extracts sequences for annotated features from a GFF3 or GTF file.
-`--annotation` is required in this mode.
+`--annotation` is required in single-genome mode; in batch mode each row supplies
+its own annotation path.
 
 ```bash
 genoprobe targets \
@@ -57,7 +65,8 @@ genoprobe targets \
 
 ### `--annotation / -a GFF_GTF`
 
-Path to the annotation file. Both GFF3 and GTF formats are supported.
+Path to the annotation file (single-genome mode). Both GFF3 and GTF formats are
+supported.
 
 ### `--feature TYPE [TYPE ...]`
 
@@ -72,15 +81,100 @@ genoprobe targets --mode gene --annotation genes.gff --feature gene ...
 genoprobe targets --mode gene --annotation genes.gff --feature CDS exon ...
 ```
 
+## Batch mode: `--targets-file`
+
+Use `--targets-file / -t` to process multiple genome-annotation pairs in one
+command. Each pair is processed independently and written to its own subfolder
+under `<output>/`.
+
+### File format
+
+The file can be TSV (tab-separated) or CSV (comma-separated); the delimiter is
+detected automatically.
+
+**With column headers** — recognised header names:
+
+| Column | Header names accepted | Required |
+|--------|----------------------|----------|
+| Genome FASTA | `genomes`, `genome` | Yes |
+| Annotation file | `annotations`, `annotation` | No |
+| Output subfolder | `output` | No |
+
+```
+genomes	annotations	output
+/data/org1.fa	/data/org1.gff	org1
+/data/org2.fa	/data/org2.gff	org2
+/data/org3.fa		org3
+```
+
+**Without headers** — columns are positional:
+
+1. Genome FASTA (required)
+2. Annotation file (optional)
+3. Output subfolder name (optional)
+
+```
+/data/org1.fa	/data/org1.gff	org1
+/data/org2.fa	/data/org2.gff
+/data/org3.fa
+```
+
+If the `output` column is absent or empty for a row, the subfolder name defaults
+to the **genome filename stem** (e.g. `org1.fa` → `org1`).
+
+### Example
+
+```bash
+genoprobe targets \
+    --targets-file organisms.tsv \
+    --mode gene \
+    --output results/
+```
+
+Produces:
+```
+results/
+  targets/
+    org1/
+      org1_targets.fa
+      org1_targets.bed
+      org1_targets_summary.json
+    org2/
+      org2_targets.fa
+      org2_targets.bed
+      org2_targets_summary.json
+```
+
 ## Output files
 
-All outputs are written to `<output>/targets/`.
+All outputs are written to `<output>/targets/<name>/`, where `<name>` is the
+genome filename stem (or the value from the `output` column in a batch file).
+This layout keeps the pipeline stage (`targets/`) as the parent and organises
+all genomes within it.
 
 | File | Description |
 |------|-------------|
-| `targets.fa` | Target sequences in FASTA format. One entry per target region. |
-| `targets.bed` | Genomic coordinates (BED format). Strand and feature type are included for gene mode. |
-| `targets_summary.json` | JSON summary: `mode` and `target_count`. |
+| `<name>_targets.fa` | Target sequences in FASTA format. One entry per target region. |
+| `<name>_targets.bed` | Genomic coordinates (BED format). Strand and feature type are included for gene mode. |
+| `<name>_targets_summary.json` | JSON summary: `name`, `mode`, and `target_count`. |
+| `report.html` | HTML report listing each target and its length. |
+
+### Example layout
+
+```
+results/
+  targets/
+    org1/
+      org1_targets.fa
+      org1_targets.bed
+      org1_targets_summary.json
+      report.html
+    org2/
+      org2_targets.fa
+      org2_targets.bed
+      org2_targets_summary.json
+      report.html
+```
 
 ## Notes
 

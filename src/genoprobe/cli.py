@@ -122,92 +122,220 @@ def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
 # targets command
 # ---------------------------------------------------------------------------
 
+def _parse_targets_file(path: Path) -> list[dict[str, str]]:
+    """Parse a TSV/CSV batch file into a list of genome/annotation/output dicts.
+
+    Accepts files with or without a header row.  With headers the recognised
+    column names are ``genomes`` / ``genome``, ``annotations`` / ``annotation``,
+    and ``output``.  Without headers the columns are positional: genome (1),
+    annotation (2, optional), output name (3, optional).
+    """
+    text = path.read_text(encoding="utf-8").strip()
+    if not text:
+        _die(f"Targets file is empty: {path}")
+
+    lines = text.splitlines()
+    delimiter = "\t" if "\t" in lines[0] else ","
+
+    reader = csv.reader(lines, delimiter=delimiter)
+    rows = [r for r in reader if any(c.strip() for c in r)]
+
+    if not rows:
+        _die(f"No data rows found in targets file: {path}")
+
+    first_lower = [c.strip().lower() for c in rows[0]]
+    has_header = first_lower[0] in {"genomes", "genome"}
+
+    if has_header:
+        header = first_lower
+        data_rows = rows[1:]
+        genome_idx = next(i for i, h in enumerate(header) if h in {"genomes", "genome"})
+        annotation_idx = next(
+            (i for i, h in enumerate(header) if h in {"annotations", "annotation"}), None
+        )
+        output_idx = next((i for i, h in enumerate(header) if h == "output"), None)
+    else:
+        data_rows = rows
+        genome_idx = 0
+        annotation_idx = 1
+        output_idx = 2
+
+    pairs: list[dict[str, str]] = []
+    for row in data_rows:
+        genome = row[genome_idx].strip() if genome_idx < len(row) else ""
+        if not genome:
+            continue
+        annotation = (
+            row[annotation_idx].strip()
+            if annotation_idx is not None and annotation_idx < len(row)
+            else ""
+        )
+        output_name = (
+            row[output_idx].strip()
+            if output_idx is not None and output_idx < len(row)
+            else ""
+        )
+        pairs.append({"genome": genome, "annotation": annotation, "output": output_name})
+
+    if not pairs:
+        _die(f"No valid genome entries found in targets file: {path}")
+
+    return pairs
+
+
+def _run_targets(
+    genome: str,
+    annotation: str | None,
+    out_dir: Path,
+    name: str,
+    mode: str,
+    region: str | None,
+    features: list[str] | None,
+) -> list[dict[str, Any]]:
+    """Process a single genome-annotation pair and write named output files.
+
+    out_dir should already be <output>/targets/<name>/.
+    Writes <name>_targets.fa, <name>_targets.bed, <name>_targets_summary.json.
+    Returns the list of target record dicts.
+    """
+    target_records: list[dict[str, Any]] = []
+    fasta_path = out_dir / f"{name}_targets.fa"
+    bed_path = out_dir / f"{name}_targets.bed"
+
+    with fasta_path.open("w") as fa_out, bed_path.open("w") as bed_out:
+
+        if mode == "genome":
+            fasta = load_fasta(genome)
+            for seq_name in fasta.keys():
+                seq = str(fasta[seq_name]).upper()
+                if region:
+                    try:
+                        rid, coords = region.split(":")
+                        rstart, rend = (int(x) for x in coords.split("-"))
+                        if seq_name != rid:
+                            continue
+                        seq = seq[rstart - 1 : rend]
+                        label = f"{seq_name}:{rstart}-{rend}"
+                        bed_out.write(f"{seq_name}\t{rstart - 1}\t{rend}\t{label}\n")
+                    except (ValueError, KeyError):
+                        _die(f"Cannot parse --region '{region}'. Use seqid:start-end.")
+                else:
+                    label = seq_name
+                    bed_out.write(f"{seq_name}\t0\t{len(seq)}\t{label}\n")
+                fa_out.write(f">{label}\n{seq}\n")
+                target_records.append({"target": label, "length": len(seq)})
+
+        else:  # gene mode
+            all_records = load_annotation(annotation)
+            full_summary = summarize_annotation(all_records)
+            _print(f"  Loaded {len(all_records)} annotation records. Feature types: {full_summary}")
+            if features:
+                feature_set = {f.lower() for f in features}
+                records = [r for r in all_records if r.feature.lower() in feature_set]
+                _print(f"  After --feature {features} filter: {len(records)} records.")
+            else:
+                records = all_records
+
+            fasta = load_fasta(genome)
+            for rec in records:
+                if rec.seqid not in fasta.keys():
+                    continue
+                seq = extract_region(fasta, rec.seqid, rec.start, rec.end)
+                attr_id = rec.get_attr("ID") or rec.get_attr("gene_id") or rec.get_attr("Name")
+                label = attr_id or f"{rec.seqid}:{rec.start}-{rec.end}"
+                fa_out.write(f">{label}\n{seq}\n")
+                bed_out.write(
+                    f"{rec.seqid}\t{rec.start - 1}\t{rec.end}\t{label}\t"
+                    f"{rec.strand}\t{rec.feature}\n"
+                )
+                target_records.append({
+                    "target": label,
+                    "seqid": rec.seqid,
+                    "start": rec.start,
+                    "end": rec.end,
+                    "strand": rec.strand,
+                    "feature": rec.feature,
+                    "length": rec.length,
+                })
+
+    summary_path = out_dir / f"{name}_targets_summary.json"
+    summary_path.write_text(
+        json.dumps({"name": name, "mode": mode, "target_count": len(target_records)}, indent=2),
+        encoding="utf-8",
+    )
+    write_targets_report(out_dir, {r["target"]: r["length"] for r in target_records})
+
+    return target_records
+
+
 def cmd_targets(args: argparse.Namespace) -> int:
     """Extract or define target regions and write FASTA + BED."""
-    output = resolve_output_root(args.output)
-    out_dir = ensure_dir(targets_dir(output))
-
-    genomes = args.genomes
+    base_output = resolve_output_root(args.output)
     mode = args.mode.lower()
 
     if mode not in {"genome", "gene"}:
         _die(f"--mode must be 'genome' or 'gene', got '{mode}'.")
 
-    if mode == "gene" and not args.annotation:
-        _die("--annotation is required in gene mode.")
+    targets_file = getattr(args, "targets_file", None)
 
-    _print(f"[genoprobe targets] mode={mode}  genomes={len(genomes)}")
+    # Build a unified list of (genome_path, annotation_path, name) entries.
+    if targets_file:
+        if args.genomes:
+            _die("--targets-file and --genomes are mutually exclusive.")
+        pairs = _parse_targets_file(Path(targets_file))
+        entries = [
+            (p["genome"], p["annotation"] or None, p["output"] or Path(p["genome"]).stem)
+            for p in pairs
+        ]
+        _print(f"[genoprobe targets] mode={mode}  pairs={len(entries)}  (batch)")
+    else:
+        if not args.genomes:
+            _die("Either --genomes or --targets-file is required.")
+        if mode == "gene" and not args.annotation:
+            _die("--annotation is required in gene mode.")
+        entries = [
+            (g, getattr(args, "annotation", None), Path(g).stem)
+            for g in args.genomes
+        ]
+        _print(f"[genoprobe targets] mode={mode}  genomes={len(entries)}")
 
-    target_records: list[dict[str, Any]] = []
-    fasta_path = out_dir / "targets.fa"
-    bed_path = out_dir / "targets.bed"
+    base_targets = targets_dir(base_output)
 
-    with fasta_path.open("w") as fa_out, bed_path.open("w") as bed_out:
-
-        if mode == "genome":
-            for genome_path in genomes:
-                fasta = load_fasta(genome_path)
-                for seq_name in fasta.keys():
-                    seq = str(fasta[seq_name]).upper()
-                    if args.region:
-                        # Parse region string: seqid:start-end (1-based)
-                        try:
-                            rid, coords = args.region.split(":")
-                            rstart, rend = (int(x) for x in coords.split("-"))
-                            if seq_name != rid:
-                                continue
-                            seq = seq[rstart - 1 : rend]
-                            label = f"{seq_name}:{rstart}-{rend}"
-                            bed_out.write(f"{seq_name}\t{rstart - 1}\t{rend}\t{label}\n")
-                        except (ValueError, KeyError):
-                            _die(f"Cannot parse --region '{args.region}'. Use seqid:start-end.")
-                    else:
-                        label = seq_name
-                        bed_out.write(f"{seq_name}\t0\t{len(seq)}\t{label}\n")
-                    fa_out.write(f">{label}\n{seq}\n")
-                    target_records.append({"target": label, "length": len(seq)})
-
-        else:  # gene mode
-            records = load_annotation(
-                args.annotation,
-                features=args.feature if args.feature else None,
+    for genome_path, annotation_path, name in entries:
+        if mode == "gene" and not annotation_path:
+            _die(
+                f"--mode gene requires an annotation for genome '{genome_path}'. "
+                "Add an 'annotations' column to your targets file."
             )
-            _print(f"  Loaded {len(records)} annotation records.")
-            summary = summarize_annotation(records)
-            _print(f"  Feature counts: {summary}")
+        out_dir = ensure_dir(base_targets / name)
+        _print(f"  [{name}] genome={genome_path}  annotation={annotation_path or '—'}")
 
-            for genome_path in genomes:
-                fasta = load_fasta(genome_path)
-                for rec in records:
-                    if rec.seqid not in fasta.keys():
-                        continue
-                    seq = extract_region(fasta, rec.seqid, rec.start, rec.end)
-                    attr_id = rec.get_attr("ID") or rec.get_attr("gene_id") or rec.get_attr("Name")
-                    label = attr_id or f"{rec.seqid}:{rec.start}-{rec.end}"
-                    fa_out.write(f">{label}\n{seq}\n")
-                    bed_out.write(
-                        f"{rec.seqid}\t{rec.start - 1}\t{rec.end}\t{label}\t"
-                        f"{rec.strand}\t{rec.feature}\n"
-                    )
-                    target_records.append({
-                        "target": label,
-                        "seqid": rec.seqid,
-                        "start": rec.start,
-                        "end": rec.end,
-                        "strand": rec.strand,
-                        "feature": rec.feature,
-                        "length": rec.length,
-                    })
+        records = _run_targets(
+            genome=genome_path,
+            annotation=annotation_path,
+            out_dir=out_dir,
+            name=name,
+            mode=mode,
+            region=getattr(args, "region", None),
+            features=getattr(args, "feature", None),
+        )
+        _print(f"    Wrote {len(records)} targets → {out_dir}")
 
-    summary_path = out_dir / "targets_summary.json"
-    summary_path.write_text(
-        json.dumps({"mode": mode, "target_count": len(target_records)}, indent=2),
-        encoding="utf-8",
-    )
-    write_targets_report(out_dir, {r["target"]: r["length"] for r in target_records})
-
-    _print(f"  Wrote {len(target_records)} targets → {out_dir}")
     return 0
+
+
+# ---------------------------------------------------------------------------
+# Shared helper
+# ---------------------------------------------------------------------------
+
+def _discover_names(stage_dir: Path, stage_label: str) -> list[str]:
+    """Return sorted genome names from per-name subdirs within a stage directory."""
+    if not stage_dir.exists():
+        _die(f"{stage_label}/ directory not found: {stage_dir}. Run the preceding stage first.")
+    names = sorted(d.name for d in stage_dir.iterdir() if d.is_dir())
+    if not names:
+        _die(f"No genome subfolders found in {stage_dir}. Run the preceding stage first.")
+    return names
 
 
 # ---------------------------------------------------------------------------
@@ -217,11 +345,10 @@ def cmd_targets(args: argparse.Namespace) -> int:
 def cmd_probes(args: argparse.Namespace) -> int:
     """Generate probe candidates from target sequences."""
     output = resolve_output_root(args.output)
-    targets_path = targets_dir(output) / "targets.fa"
-    if not targets_path.exists():
-        _die(f"targets.fa not found at {targets_path}. Run 'genoprobe targets' first.")
+    base_targets = targets_dir(output)
+    base_probes = probes_dir(output)
 
-    out_dir = ensure_dir(probes_dir(output))
+    names = _discover_names(base_targets, "targets")
     profile = _resolve_profile("probes", args.profile)
 
     config = ProbeDesignConfig(
@@ -247,45 +374,51 @@ def cmd_probes(args: argparse.Namespace) -> int:
     )
 
     workers = resolve_worker_count(args.workers)
-    _print(f"[genoprobe probes] profile={args.profile or 'balanced'}  workers={workers}")
+    _print(f"[genoprobe probes] profile={args.profile or 'balanced'}  workers={workers}  genomes={len(names)}")
 
     from pyfaidx import Fasta
-    fasta = Fasta(str(targets_path), as_raw=True, sequence_always_upper=True)
 
-    all_rows: list[dict[str, Any]] = []
-    target_counts: dict[str, int] = {}
+    for name in names:
+        targets_path = base_targets / name / f"{name}_targets.fa"
+        if not targets_path.exists():
+            _print(f"  [{name}] WARNING: {targets_path.name} not found, skipping.")
+            continue
 
-    for target_name in fasta.keys():
-        seq = str(fasta[target_name])
-        candidates = generate_candidates(seq, target_name, config)
-        target_counts[target_name] = len(candidates)
-        for c in candidates:
-            all_rows.append({
-                "target": c.target_name,
-                "start": c.start,
-                "end": c.end,
-                "sequence": c.sequence,
-                "length": c.length,
-                "tm": round(c.tm, 2),
-                "gc": round(c.gc, 2),
-                "entropy": round(c.entropy, 4),
-                "self_comp_total": c.self_comp_total,
-                "self_comp_run": c.self_comp_run,
-                "hairpin_tm": round(c.hairpin_tm, 2),
-                "homodimer_tm": round(c.homodimer_tm, 2),
-                "score": round(c.score, 4),
-            })
+        out_dir = ensure_dir(base_probes / name)
+        fasta = Fasta(str(targets_path), as_raw=True, sequence_always_upper=True)
 
-    candidates_path = out_dir / "candidates.tsv"
-    _write_tsv(candidates_path, all_rows)
-    summary_path = out_dir / "probes_summary.json"
-    summary_path.write_text(
-        json.dumps({"total_candidates": len(all_rows), "per_target": target_counts}, indent=2),
-        encoding="utf-8",
-    )
-    write_probes_report(out_dir, target_counts)
+        all_rows: list[dict[str, Any]] = []
+        target_counts: dict[str, int] = {}
 
-    _print(f"  Generated {len(all_rows)} candidates across {len(target_counts)} targets → {out_dir}")
+        for target_name in fasta.keys():
+            seq = str(fasta[target_name])
+            candidates = generate_candidates(seq, target_name, config)
+            target_counts[target_name] = len(candidates)
+            for c in candidates:
+                all_rows.append({
+                    "target": c.target_name,
+                    "start": c.start,
+                    "end": c.end,
+                    "sequence": c.sequence,
+                    "length": c.length,
+                    "tm": round(c.tm, 2),
+                    "gc": round(c.gc, 2),
+                    "entropy": round(c.entropy, 4),
+                    "self_comp_total": c.self_comp_total,
+                    "self_comp_run": c.self_comp_run,
+                    "hairpin_tm": round(c.hairpin_tm, 2),
+                    "homodimer_tm": round(c.homodimer_tm, 2),
+                    "score": round(c.score, 4),
+                })
+
+        _write_tsv(out_dir / f"{name}_candidates.tsv", all_rows)
+        (out_dir / f"{name}_probes_summary.json").write_text(
+            json.dumps({"name": name, "total_candidates": len(all_rows), "per_target": target_counts}, indent=2),
+            encoding="utf-8",
+        )
+        write_probes_report(out_dir, target_counts)
+        _print(f"  [{name}] Generated {len(all_rows)} candidates across {len(target_counts)} targets → {out_dir}")
+
     return 0
 
 
@@ -296,13 +429,11 @@ def cmd_probes(args: argparse.Namespace) -> int:
 def cmd_screen(args: argparse.Namespace) -> int:
     """Off-target screening via mismatch matching (+ optional Fulgor index)."""
     output = resolve_output_root(args.output)
-    candidates_path = probes_dir(output) / "candidates.tsv"
-    targets_bed = targets_dir(output) / "targets.bed"
+    base_probes = probes_dir(output)
+    base_targets = targets_dir(output)
+    base_screen = screen_dir(output)
 
-    if not candidates_path.exists():
-        _die(f"candidates.tsv not found at {candidates_path}. Run 'genoprobe probes' first.")
-
-    out_dir = ensure_dir(screen_dir(output))
+    names = _discover_names(base_probes, "probes")
     profile = _resolve_profile("screen", args.profile)
 
     max_mm = args.max_mismatches if args.max_mismatches is not None else profile["max_mismatches"]
@@ -310,83 +441,81 @@ def cmd_screen(args: argparse.Namespace) -> int:
     offtarget_pw = profile["offtarget_penalty_weight"]
     min_ontarget = profile["min_ontarget_fraction"]
 
-    _print(f"[genoprobe screen] profile={args.profile or 'balanced'}  max_mismatches={max_mm}")
+    _print(f"[genoprobe screen] profile={args.profile or 'balanced'}  max_mismatches={max_mm}  genomes={len(names)}")
 
-    # Load candidate probes
-    with candidates_path.open(encoding="utf-8") as fh:
-        reader = csv.DictReader(fh, delimiter="\t")
-        candidates = list(reader)
-
-    # Load genome sequences for matching
     genome_records = load_genomes(args.genomes)
     _print(f"  Loaded {len(genome_records)} genome sequences for off-target screening.")
 
-    # Build k-mer index if filtering enabled
     kmer_index: dict[str, int] = {}
     if max_kmer is not None:
         _print(f"  Building k-mer index (k=18)...")
         kmer_index = build_kmer_index(genome_records, k=18)
 
-    # Parse target BED to know on-target intervals
-    target_intervals: dict[str, list[tuple[int, int]]] = {}
-    if targets_bed.exists():
-        for line in targets_bed.read_text().splitlines():
-            parts = line.split("\t")
-            if len(parts) >= 4:
-                seqid, start, end = parts[0], int(parts[1]), int(parts[2])
-                target_intervals.setdefault(seqid, []).append((start, end))
-
-    screened_rows: list[dict[str, Any]] = []
-    target_passing: dict[str, int] = {}
-
-    for row in candidates:
-        seq = row["sequence"]
-        target_name = row["target"]
-
-        # k-mer frequency filter
-        if max_kmer is not None and kmer_index:
-            max_freq = query_kmer_frequency(kmer_index, seq)
-            if max_freq > max_kmer:
-                continue
-
-        # Mismatch matching across all genome sequences
-        on_hits = []
-        off_hits = []
-        for grec in genome_records:
-            hits = find_hits(seq, grec.sequence, grec.name, max_mismatches=max_mm)
-            for hit in hits:
-                intervals = target_intervals.get(grec.name, [])
-                is_on = any(s <= hit.position <= e for s, e in intervals)
-                (on_hits if is_on else off_hits).append(hit)
-
-        summary = MatchSummary(query=seq, on_target_hits=on_hits, off_target_hits=off_hits)
-
-        if summary.on_target_score < min_ontarget:
+    for name in names:
+        candidates_path = base_probes / name / f"{name}_candidates.tsv"
+        if not candidates_path.exists():
+            _print(f"  [{name}] WARNING: {candidates_path.name} not found, skipping.")
             continue
 
-        off_score = summary.off_target_score * offtarget_pw
-        final_score = max(0.0, float(row["score"]) - off_score / max(1, len(off_hits) + 1))
+        targets_bed = base_targets / name / f"{name}_targets.bed"
+        out_dir = ensure_dir(base_screen / name)
 
-        screened_rows.append({
-            **row,
-            "on_target_hits": len(on_hits),
-            "off_target_hits": len(off_hits),
-            "on_target_score": round(summary.on_target_score, 4),
-            "off_target_score": round(summary.off_target_score, 4),
-            "final_score": round(final_score, 4),
-        })
-        target_passing[target_name] = target_passing.get(target_name, 0) + 1
+        with candidates_path.open(encoding="utf-8") as fh:
+            candidates = list(csv.DictReader(fh, delimiter="\t"))
 
-    screened_path = out_dir / "screened.tsv"
-    _write_tsv(screened_path, screened_rows)
-    summary_path = out_dir / "screen_summary.json"
-    summary_path.write_text(
-        json.dumps({"total_passing": len(screened_rows), "per_target": target_passing}, indent=2),
-        encoding="utf-8",
-    )
-    write_screen_report(out_dir, target_passing)
+        target_intervals: dict[str, list[tuple[int, int]]] = {}
+        if targets_bed.exists():
+            for line in targets_bed.read_text().splitlines():
+                parts = line.split("\t")
+                if len(parts) >= 4:
+                    seqid, start, end = parts[0], int(parts[1]), int(parts[2])
+                    target_intervals.setdefault(seqid, []).append((start, end))
 
-    _print(f"  {len(screened_rows)} probes passed screening → {out_dir}")
+        screened_rows: list[dict[str, Any]] = []
+        target_passing: dict[str, int] = {}
+
+        for row in candidates:
+            seq = row["sequence"]
+            target_name = row["target"]
+
+            if max_kmer is not None and kmer_index:
+                if query_kmer_frequency(kmer_index, seq) > max_kmer:
+                    continue
+
+            on_hits = []
+            off_hits = []
+            for grec in genome_records:
+                hits = find_hits(seq, grec.sequence, grec.name, max_mismatches=max_mm)
+                for hit in hits:
+                    intervals = target_intervals.get(grec.name, [])
+                    is_on = any(s <= hit.position <= e for s, e in intervals)
+                    (on_hits if is_on else off_hits).append(hit)
+
+            summary = MatchSummary(query=seq, on_target_hits=on_hits, off_target_hits=off_hits)
+            if summary.on_target_score < min_ontarget:
+                continue
+
+            off_score = summary.off_target_score * offtarget_pw
+            final_score = max(0.0, float(row["score"]) - off_score / max(1, len(off_hits) + 1))
+
+            screened_rows.append({
+                **row,
+                "on_target_hits": len(on_hits),
+                "off_target_hits": len(off_hits),
+                "on_target_score": round(summary.on_target_score, 4),
+                "off_target_score": round(summary.off_target_score, 4),
+                "final_score": round(final_score, 4),
+            })
+            target_passing[target_name] = target_passing.get(target_name, 0) + 1
+
+        _write_tsv(out_dir / f"{name}_screened.tsv", screened_rows)
+        (out_dir / f"{name}_screen_summary.json").write_text(
+            json.dumps({"name": name, "total_passing": len(screened_rows), "per_target": target_passing}, indent=2),
+            encoding="utf-8",
+        )
+        write_screen_report(out_dir, target_passing)
+        _print(f"  [{name}] {len(screened_rows)} probes passed screening → {out_dir}")
+
     return 0
 
 
@@ -397,15 +526,9 @@ def cmd_screen(args: argparse.Namespace) -> int:
 def cmd_panels(args: argparse.Namespace) -> int:
     """Assemble final probe panels from screened candidates."""
     output = resolve_output_root(args.output)
+    base_probes = probes_dir(output)
 
-    # Prefer screened candidates if available, fall back to raw candidates
-    screened_path = screen_dir(output) / "screened.tsv"
-    candidates_path = probes_dir(output) / "candidates.tsv"
-    source = screened_path if screened_path.exists() else candidates_path
-    if not source.exists():
-        _die("No screened.tsv or candidates.tsv found. Run 'genoprobe probes' first.")
-
-    out_dir = ensure_dir(panels_dir(output))
+    names = _discover_names(base_probes, "probes")
     profile = _resolve_profile("panels", args.profile)
 
     config = PanelConfig(
@@ -416,70 +539,83 @@ def cmd_panels(args: argparse.Namespace) -> int:
         panel_heterodimer_penalty_weight=profile["panel_heterodimer_penalty_weight"],
     )
 
-    _print(f"[genoprobe panels] profile={args.profile or 'balanced'}  source={source.name}")
-
-    with source.open(encoding="utf-8") as fh:
-        reader = csv.DictReader(fh, delimiter="\t")
-        all_candidates = list(reader)
-
-    # Group by target
-    by_target: dict[str, list[dict[str, Any]]] = {}
-    for row in all_candidates:
-        by_target.setdefault(row["target"], []).append(row)
+    _print(f"[genoprobe panels] profile={args.profile or 'balanced'}  genomes={len(names)}")
 
     from genoprobe.probes import ProbeCandidate
-    final_rows: list[dict[str, Any]] = []
-    panel_counts: dict[str, int] = {}
 
-    for target_name, rows in by_target.items():
-        # Reconstruct ProbeCandidate objects for panel assembly
-        probe_objs: list[ProbeCandidate] = []
-        for r in rows:
-            try:
-                probe_objs.append(ProbeCandidate(
-                    sequence=r["sequence"],
-                    target_name=target_name,
-                    start=int(r["start"]),
-                    end=int(r["end"]),
-                    tm=float(r["tm"]),
-                    gc=float(r["gc"]),
-                    entropy=float(r["entropy"]),
-                    self_comp_total=int(r["self_comp_total"]),
-                    self_comp_run=int(r["self_comp_run"]),
-                    hairpin_tm=float(r["hairpin_tm"]),
-                    homodimer_tm=float(r["homodimer_tm"]),
-                    score=float(r.get("final_score") or r.get("score") or 0),
-                ))
-            except (KeyError, ValueError):
-                continue
+    for name in names:
+        # Prefer screened candidates; fall back to raw candidates
+        screened_path = screen_dir(output) / name / f"{name}_screened.tsv"
+        candidates_path = base_probes / name / f"{name}_candidates.tsv"
 
-        # Sort by score descending before assembly
-        probe_objs.sort(key=lambda p: p.score, reverse=True)
-        result = assemble_panel(probe_objs, target_name, config)
-        panel_counts[target_name] = result.probe_count
+        if screened_path.exists():
+            source_path = screened_path
+            source_label = "screened"
+        elif candidates_path.exists():
+            source_path = candidates_path
+            source_label = "candidates"
+        else:
+            _print(f"  [{name}] WARNING: no candidates found, skipping.")
+            continue
 
-        for p in result.selected_probes:
-            final_rows.append({
-                "target": p.target_name,
-                "start": p.start,
-                "end": p.end,
-                "sequence": p.sequence,
-                "length": p.length,
-                "tm": round(p.tm, 2),
-                "gc": round(p.gc, 2),
-                "score": round(p.score, 4),
-            })
+        out_dir = ensure_dir(panels_dir(output) / name)
+        _print(f"  [{name}] source={source_label}")
 
-    final_path = out_dir / "final_probes.tsv"
-    _write_tsv(final_path, final_rows)
-    summary_path = out_dir / "panels_summary.json"
-    summary_path.write_text(
-        json.dumps({"total_probes": len(final_rows), "per_target": panel_counts}, indent=2),
-        encoding="utf-8",
-    )
-    write_panels_report(out_dir, panel_counts)
+        with source_path.open(encoding="utf-8") as fh:
+            all_candidates = list(csv.DictReader(fh, delimiter="\t"))
 
-    _print(f"  Assembled {len(final_rows)} panel probes across {len(panel_counts)} targets → {out_dir}")
+        by_target: dict[str, list[dict[str, Any]]] = {}
+        for row in all_candidates:
+            by_target.setdefault(row["target"], []).append(row)
+
+        final_rows: list[dict[str, Any]] = []
+        panel_counts: dict[str, int] = {}
+
+        for target_name, rows in by_target.items():
+            probe_objs: list[ProbeCandidate] = []
+            for r in rows:
+                try:
+                    probe_objs.append(ProbeCandidate(
+                        sequence=r["sequence"],
+                        target_name=target_name,
+                        start=int(r["start"]),
+                        end=int(r["end"]),
+                        tm=float(r["tm"]),
+                        gc=float(r["gc"]),
+                        entropy=float(r["entropy"]),
+                        self_comp_total=int(r["self_comp_total"]),
+                        self_comp_run=int(r["self_comp_run"]),
+                        hairpin_tm=float(r["hairpin_tm"]),
+                        homodimer_tm=float(r["homodimer_tm"]),
+                        score=float(r.get("final_score") or r.get("score") or 0),
+                    ))
+                except (KeyError, ValueError):
+                    continue
+
+            probe_objs.sort(key=lambda p: p.score, reverse=True)
+            result = assemble_panel(probe_objs, target_name, config)
+            panel_counts[target_name] = result.probe_count
+
+            for p in result.selected_probes:
+                final_rows.append({
+                    "target": p.target_name,
+                    "start": p.start,
+                    "end": p.end,
+                    "sequence": p.sequence,
+                    "length": p.length,
+                    "tm": round(p.tm, 2),
+                    "gc": round(p.gc, 2),
+                    "score": round(p.score, 4),
+                })
+
+        _write_tsv(out_dir / f"{name}_final_probes.tsv", final_rows)
+        (out_dir / f"{name}_panels_summary.json").write_text(
+            json.dumps({"name": name, "total_probes": len(final_rows), "per_target": panel_counts}, indent=2),
+            encoding="utf-8",
+        )
+        write_panels_report(out_dir, panel_counts)
+        _print(f"  [{name}] Assembled {len(final_rows)} panel probes → {out_dir}")
+
     return 0
 
 
@@ -546,15 +682,27 @@ def _build_parser() -> argparse.ArgumentParser:
 
     # ---- targets -----------------------------------------------------------
     p_targets = sub.add_parser("targets", help="Define probe-design target regions.")
-    _add_genomes(p_targets)
     _add_output(p_targets)
+    p_targets.add_argument(
+        "--genomes", "-g", nargs="+", default=None, metavar="FASTA",
+        help="One or more genome FASTA files. Mutually exclusive with --targets-file.",
+    )
+    p_targets.add_argument(
+        "--targets-file", "-t", metavar="TSV_CSV",
+        help=(
+            "TSV/CSV file with one genome-annotation pair per row. "
+            "Recognised column headers: 'genomes', 'annotations', 'output' (subfolder name). "
+            "Headerless files use columns in that order. "
+            "Mutually exclusive with --genomes."
+        ),
+    )
     p_targets.add_argument(
         "--mode", "-m", choices=["genome", "gene"], required=True,
         help="'genome': tile full genome(s); 'gene': use annotated features.",
     )
     p_targets.add_argument(
         "--annotation", "-a", metavar="GFF_GTF",
-        help="Annotation file (GFF3 or GTF). Required for --mode gene.",
+        help="Annotation file (GFF3 or GTF). Required for --mode gene (single-genome mode).",
     )
     p_targets.add_argument(
         "--region", metavar="SEQID:START-END",
