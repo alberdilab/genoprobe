@@ -6,6 +6,20 @@
 
 - No unreleased changes yet.
 
+## [0.1.4] - 2026-05-29
+
+### Added
+
+- `probes` command: cross-genome parallelisation via `--workers / -w`. Each genome is processed in a separate worker process; output is buffered per genome and flushed atomically to avoid interleaving. Defaults to `min(CPU_count, 4)` workers.
+
+### Changed
+
+- `probes` command: per-target progress is now a single summary line (`'<target>' (N bp) → K candidates from W windows`) instead of a per-filter-step breakdown. All filtering happens in one pass inside `generate_candidates`, so the step-by-step framing was misleading.
+
+### Fixed
+
+- `probes` command documentation: corrected default `--workers` value from 8 to 4 and updated output file paths to reflect the per-genome subdirectory layout introduced in v0.1.2 (`<output>/probes/<name>/<name>_candidates.tsv`).
+- Quick-start guide: updated all stage output paths to the per-genome subdirectory layout (`targets/<name>/`, `probes/<name>/`, `screen/<name>/`, `panels/<name>/`).
 ## [0.1.3] - 2026-05-29
 
 ### Changed

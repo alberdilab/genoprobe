@@ -37,15 +37,6 @@ def _html_page(title: str, body: str) -> str:
 """
 
 
-def write_targets_report(output_dir: Path, summary: dict[str, int]) -> Path:
-    rows = [[k, str(v)] for k, v in sorted(summary.items())]
-    table = _html_table(["Target", "Length (bp)"], rows)
-    html = _html_page("genoprobe — Targets", table)
-    report = output_dir / "report.html"
-    report.write_text(html, encoding="utf-8")
-    return report
-
-
 def write_probes_report(output_dir: Path, summary: dict[str, int]) -> Path:
     rows = [[k, str(v)] for k, v in sorted(summary.items())]
     table = _html_table(["Target", "Candidates"], rows)
