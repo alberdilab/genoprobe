@@ -72,7 +72,7 @@ See [Profiles](../profiles.md) for profile-specific parameter values.
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--workers / -w N` | auto | Number of worker processes. |
+| `--workers / -w N` | auto | Number of worker processes. Defaults to `min(CPU_count, 4)`. Each focal genome is screened in a separate worker process, so speedup scales with genome count up to `--workers`. |
 
 ## How screening works
 

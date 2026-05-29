@@ -6,6 +6,11 @@
 
 - No unreleased changes yet.
 
+## [0.2.1] - 2026-05-29
+
+### Added
+
+- `screen` command: parallel execution via `--workers / -w`. Each focal genome is now screened in a separate worker process; output is buffered per genome and flushed atomically to avoid interleaving. Defaults to `min(CPU_count, 4)` workers.
 ## [0.2.0] - 2026-05-29
 
 ### Changed

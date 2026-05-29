@@ -515,6 +515,107 @@ def cmd_probes(args: argparse.Namespace) -> int:
 # screen command
 # ---------------------------------------------------------------------------
 
+def _screen_genome(
+    name: str,
+    base_targets: Path,
+    base_probes: Path,
+    base_screen: Path,
+    mode: str,
+    max_mm: int,
+    max_kmer: int | None,
+    offtarget_pw: float,
+    min_ontarget: float,
+    project_records: dict[str, list],
+    external_records: list,
+    kmer_index: dict[str, int],
+) -> tuple[str, list[str], int]:
+    """Screen one focal genome's probe candidates. Runs in a worker process.
+
+    Returns (name, log_lines, total_passing) so the caller can flush output
+    atomically and avoid interleaving across parallel workers.
+    """
+    log: list[str] = []
+
+    candidates_path = base_probes / name / f"{name}_candidates.tsv.xz"
+    if not candidates_path.exists():
+        log.append(f"  [{name}] WARNING: {candidates_path.name} not found, skipping.")
+        return name, log, 0
+
+    targets_bed = base_targets / name / f"{name}_targets.bed"
+    out_dir = ensure_dir(base_screen / name)
+
+    with _open_tsv(candidates_path) as fh:
+        candidates = list(csv.DictReader(fh, delimiter="\t"))
+
+    target_intervals: dict[str, list[tuple[int, int]]] = {}
+    if mode == "genome" and targets_bed.exists():
+        for line in targets_bed.read_text().splitlines():
+            parts = line.split("\t")
+            if len(parts) >= 4:
+                seqid, start, end = parts[0], int(parts[1]), int(parts[2])
+                target_intervals.setdefault(seqid, []).append((start, end))
+
+    focal_fa = base_targets / name / f"{name}_targets.fa"
+    focal_recs = project_records.get(name) or (load_genomes([focal_fa]) if focal_fa.exists() else [])
+
+    other_recs: list = []
+    for pname, recs in project_records.items():
+        if pname != name:
+            other_recs.extend(recs)
+
+    genome_records = focal_recs + other_recs + external_records
+
+    screened_rows: list[dict[str, Any]] = []
+    target_passing: dict[str, int] = {}
+
+    for row in candidates:
+        seq = row["sequence"]
+        target_name = row["target"]
+
+        if max_kmer is not None and kmer_index:
+            if query_kmer_frequency(kmer_index, seq) > max_kmer:
+                continue
+
+        on_hits = []
+        off_hits = []
+        for grec in genome_records:
+            hits = find_hits(seq, grec.sequence, grec.name, max_mismatches=max_mm)
+            for hit in hits:
+                if mode == "gene":
+                    is_on = (grec.name == target_name)
+                else:
+                    intervals = target_intervals.get(grec.name, [])
+                    is_on = any(s <= hit.position <= e for s, e in intervals)
+                (on_hits if is_on else off_hits).append(hit)
+
+        summary = MatchSummary(query=seq, on_target_hits=on_hits, off_target_hits=off_hits)
+        if summary.on_target_score < min_ontarget:
+            continue
+
+        off_score = summary.off_target_score * offtarget_pw
+        final_score = max(0.0, float(row["score"]) - off_score / max(1, len(off_hits) + 1))
+
+        screened_rows.append({
+            **row,
+            "on_target_hits": len(on_hits),
+            "off_target_hits": len(off_hits),
+            "on_target_score": round(summary.on_target_score, 4),
+            "off_target_score": round(summary.off_target_score, 4),
+            "final_score": round(final_score, 4),
+        })
+        target_passing[target_name] = target_passing.get(target_name, 0) + 1
+
+    _write_tsv(out_dir / f"{name}_screened.tsv", screened_rows)
+    (out_dir / f"{name}_screen_summary.json").write_text(
+        json.dumps({"name": name, "total_passing": len(screened_rows), "per_target": target_passing}, indent=2),
+        encoding="utf-8",
+    )
+    write_screen_report(out_dir, target_passing)
+    log.append(f"  [{name}] {len(screened_rows)} probes passed screening → {out_dir}")
+
+    return name, log, len(screened_rows)
+
+
 def cmd_screen(args: argparse.Namespace) -> int:
     """Off-target screening via mismatch matching (+ optional Fulgor index)."""
     output = resolve_output_root(args.output)
@@ -556,15 +657,16 @@ def cmd_screen(args: argparse.Namespace) -> int:
             project_records[pname] = load_genomes([fa])
 
     # Load external genomes (optional, outside the project).
-    external_records = []
+    external_records: list = []
     if getattr(args, "external", None):
         external_records = load_genomes(args.external)
         _print(f"  Loaded {len(external_records)} external genome sequences.")
 
+    workers = resolve_worker_count(args.workers)
     _print(
         f"[genoprobe screen] mode={mode}  profile={args.profile or 'balanced'}  "
         f"max_mismatches={max_mm}  project_genomes={len(project_records)}  "
-        f"external_sequences={len(external_records)}"
+        f"external_sequences={len(external_records)}  workers={workers}"
     )
 
     # Build k-mer index once from all screening sequences (project + external).
@@ -582,94 +684,39 @@ def cmd_screen(args: argparse.Namespace) -> int:
                     kmer_all.extend(load_genomes([fa]))
         kmer_index = build_kmer_index(kmer_all, k=18)
 
+    names_to_run: list[str] = []
     for name in names:
-        candidates_path = base_probes / name / f"{name}_candidates.tsv.xz"
-        if not candidates_path.exists():
-            _print(f"  [{name}] WARNING: {candidates_path.name} not found, skipping.")
-            continue
-
-        targets_bed = base_targets / name / f"{name}_targets.bed"
-        out_dir = ensure_dir(base_screen / name)
-        sentinel = out_dir / f"{name}_screened.tsv"
+        sentinel = base_screen / name / f"{name}_screened.tsv"
         if not args.overwrite and sentinel.exists():
             _print(f"  [{name}] Skipping (outputs exist; use --overwrite to redo).")
-            continue
+        else:
+            names_to_run.append(name)
 
-        with _open_tsv(candidates_path) as fh:
-            candidates = list(csv.DictReader(fh, delimiter="\t"))
-
-        # Genome mode uses BED coordinates to classify on-target hits in the
-        # focal genome; everything outside those intervals is off-target.
-        target_intervals: dict[str, list[tuple[int, int]]] = {}
-        if mode == "genome" and targets_bed.exists():
-            for line in targets_bed.read_text().splitlines():
-                parts = line.split("\t")
-                if len(parts) >= 4:
-                    seqid, start, end = parts[0], int(parts[1]), int(parts[2])
-                    target_intervals.setdefault(seqid, []).append((start, end))
-
-        # Focal genome's own target sequences (always included regardless of
-        # include/exclude, since on-target hits must be detectable).
-        focal_fa = base_targets / name / f"{name}_targets.fa"
-        focal_recs = project_records.get(name) or (load_genomes([focal_fa]) if focal_fa.exists() else [])
-
-        # Other project genomes in the screening set.
-        other_recs = []
-        for pname, recs in project_records.items():
-            if pname != name:
-                other_recs.extend(recs)
-
-        genome_records = focal_recs + other_recs + external_records
-
-        screened_rows: list[dict[str, Any]] = []
-        target_passing: dict[str, int] = {}
-
-        for row in candidates:
-            seq = row["sequence"]
-            target_name = row["target"]
-
-            if max_kmer is not None and kmer_index:
-                if query_kmer_frequency(kmer_index, seq) > max_kmer:
-                    continue
-
-            on_hits = []
-            off_hits = []
-            for grec in genome_records:
-                hits = find_hits(seq, grec.sequence, grec.name, max_mismatches=max_mm)
-                for hit in hits:
-                    if mode == "gene":
-                        # On-target only when the sequence name matches the
-                        # probe's specific target gene.
-                        is_on = (grec.name == target_name)
-                    else:
-                        intervals = target_intervals.get(grec.name, [])
-                        is_on = any(s <= hit.position <= e for s, e in intervals)
-                    (on_hits if is_on else off_hits).append(hit)
-
-            summary = MatchSummary(query=seq, on_target_hits=on_hits, off_target_hits=off_hits)
-            if summary.on_target_score < min_ontarget:
-                continue
-
-            off_score = summary.off_target_score * offtarget_pw
-            final_score = max(0.0, float(row["score"]) - off_score / max(1, len(off_hits) + 1))
-
-            screened_rows.append({
-                **row,
-                "on_target_hits": len(on_hits),
-                "off_target_hits": len(off_hits),
-                "on_target_score": round(summary.on_target_score, 4),
-                "off_target_score": round(summary.off_target_score, 4),
-                "final_score": round(final_score, 4),
-            })
-            target_passing[target_name] = target_passing.get(target_name, 0) + 1
-
-        _write_tsv(out_dir / f"{name}_screened.tsv", screened_rows)
-        (out_dir / f"{name}_screen_summary.json").write_text(
-            json.dumps({"name": name, "total_passing": len(screened_rows), "per_target": target_passing}, indent=2),
-            encoding="utf-8",
-        )
-        write_screen_report(out_dir, target_passing)
-        _print(f"  [{name}] {len(screened_rows)} probes passed screening → {out_dir}")
+    if workers <= 1 or len(names_to_run) <= 1:
+        for name in names_to_run:
+            _, log_lines, _ = _screen_genome(
+                name, base_targets, base_probes, base_screen,
+                mode, max_mm, max_kmer, offtarget_pw, min_ontarget,
+                project_records, external_records, kmer_index,
+            )
+            for line in log_lines:
+                _print(line)
+    else:
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {
+                pool.submit(
+                    _screen_genome,
+                    name, base_targets, base_probes, base_screen,
+                    mode, max_mm, max_kmer, offtarget_pw, min_ontarget,
+                    project_records, external_records, kmer_index,
+                ): name
+                for name in names_to_run
+            }
+            for future in as_completed(futures):
+                _, log_lines, _ = future.result()
+                for line in log_lines:
+                    _print(line)
 
     return 0
 
