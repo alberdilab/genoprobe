@@ -821,18 +821,43 @@ def cmd_screen(args: argparse.Namespace) -> int:
             for line in log_lines:
                 _print(line)
     else:
-        # Multi-worker path: pass only file paths to the initializer so each
-        # worker loads its own copy from disk.  This avoids pickling large
-        # dicts (k-mer index, genome sequences) through IPC, which previously
-        # triggered OOM kills → BrokenProcessPool with many genomes/workers.
+        # Multi-worker path: build all shared data in the main process once,
+        # then fork workers so they inherit a single COW copy.  This avoids
+        # both large-object IPC pickling and per-worker rebuilds, which caused
+        # OOM → BrokenProcessPool when many genomes and workers were combined.
+        project_records_mp: dict[str, list] = {
+            pname: load_genomes([Path(p)])
+            for pname, p in project_paths.items()
+            if Path(p).exists()
+        }
+        kmer_index_mp: dict[str, int] = {}
         if max_kmer is not None:
-            _print("  Building k-mer index (k=18, per worker)...")
+            _print("  Building k-mer index (k=18)...")
+            kmer_index_mp = build_kmer_index(
+                load_genomes([Path(p) for p in all_kmer_paths]), k=18
+            )
+            if external_records:
+                ext_index = build_kmer_index(external_records, k=18)
+                for kmer, count in ext_index.items():
+                    kmer_index_mp[kmer] = kmer_index_mp.get(kmer, 0) + count
+        _g_kmer_index = kmer_index_mp
+        _g_project_records = project_records_mp
+        _g_external_records = external_records
+
+        import multiprocessing as mp
         from concurrent.futures import ProcessPoolExecutor, as_completed
-        with ProcessPoolExecutor(
-            max_workers=workers,
-            initializer=_init_screen_worker,
-            initargs=(project_paths, external_paths, all_kmer_paths, max_kmer is not None),
-        ) as pool:
+
+        # Fork on Unix: workers inherit pre-built globals via COW (one physical
+        # copy shared across all workers).  Windows lacks fork; fall back to
+        # spawn with the initializer-based loading path.
+        pool_kwargs: dict[str, Any] = {"max_workers": workers}
+        if sys.platform != "win32":
+            pool_kwargs["mp_context"] = mp.get_context("fork")
+        else:
+            pool_kwargs["initializer"] = _init_screen_worker
+            pool_kwargs["initargs"] = (project_paths, external_paths, all_kmer_paths, max_kmer is not None)
+
+        with ProcessPoolExecutor(**pool_kwargs) as pool:
             futures = {
                 pool.submit(
                     _screen_genome,

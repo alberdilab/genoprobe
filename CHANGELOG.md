@@ -6,6 +6,12 @@
 
 - No unreleased changes yet.
 
+## [0.3.2] - 2026-05-29
+
+### Fixed
+
+- `screen` command: `BrokenProcessPool` crash still occurred with many genomes (e.g. 36) and many workers (e.g. 16) even after v0.3.1. The v0.3.1 fix moved from IPC pickling to per-worker rebuilds, but each worker still independently loaded all project genomes and built the full k-mer index during initialisation. With 16 workers doing this simultaneously the aggregate memory exceeded available RAM. The multi-worker path now mirrors the single-worker path: k-mer index and genome records are built once in the main process, then workers are started with a `fork` context (Unix) so they inherit the data via copy-on-write with no additional physical memory. On Windows, which lacks `fork`, the previous initializer-based path is retained as a fallback.
+
 ## [0.3.1] - 2026-05-29
 
 ### Fixed
