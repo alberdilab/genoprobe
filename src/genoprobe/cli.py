@@ -593,20 +593,31 @@ _g_external_records: list = []
 
 
 def _init_screen_worker(
-    kmer_index: dict[str, int],
-    project_records: dict[str, list],
-    external_records: list,
+    project_paths: dict[str, str],
+    external_paths: list[str],
+    kmer_paths: list[str],
+    use_kmer: bool,
 ) -> None:
-    """ProcessPoolExecutor initializer — loads shared read-only data once per worker."""
+    """ProcessPoolExecutor initializer — loads shared read-only data from disk once per worker.
+
+    Accepts file paths rather than pre-loaded data to avoid pickling large dicts through
+    IPC, which causes BrokenProcessPool via OOM when there are many genomes or workers.
+    """
     global _g_kmer_index, _g_project_records, _g_external_records
-    _g_kmer_index = kmer_index
-    _g_project_records = project_records
-    _g_external_records = external_records
-
-
-def _build_kmer_from_paths(paths: list[Path], k: int = 18) -> dict[str, int]:
-    """Build a partial k-mer index from a list of FASTA files. Worker function."""
-    return build_kmer_index(load_genomes(paths), k)
+    for pname, path_str in project_paths.items():
+        p = Path(path_str)
+        if p.exists():
+            _g_project_records[pname] = load_genomes([p])
+    if external_paths:
+        _g_external_records = load_genomes([Path(p) for p in external_paths])
+    if use_kmer:
+        project_path_set = set(project_paths.values())
+        extra_paths = [Path(p) for p in kmer_paths if p not in project_path_set]
+        all_recs: list = [r for recs in _g_project_records.values() for r in recs]
+        if extra_paths:
+            all_recs.extend(load_genomes(extra_paths))
+        all_recs.extend(_g_external_records)
+        _g_kmer_index = build_kmer_index(all_recs, k=18)
 
 
 def _screen_genome(
@@ -741,57 +752,38 @@ def cmd_screen(args: argparse.Namespace) -> int:
     else:
         screened_project_names = set(all_project_names) - exclude_set
 
-    # Pre-load target sequences for project genomes in the screening set.
-    # In gene mode, targets.fa holds per-gene sequences; in genome mode it holds
-    # full chromosome/contig sequences — so the same file serves both modes.
-    project_records: dict[str, list] = {}
+    # Collect file paths for project genomes — sequences are loaded on-demand
+    # (in workers or in the main process for single-worker runs) to avoid
+    # holding large data in the parent before workers are spawned.
+    project_paths: dict[str, str] = {}
     for pname in screened_project_names:
         fa = base_targets / pname / f"{pname}_targets.fa"
         if fa.exists():
-            project_records[pname] = load_genomes([fa])
+            project_paths[pname] = str(fa)
 
-    # Load external genomes (optional, outside the project).
+    # Load external genomes now so we can report the count; paths are also
+    # forwarded to workers so they can reload from the OS page-cached files.
     external_records: list = []
+    external_paths: list[str] = []
     if getattr(args, "external", None):
+        external_paths = [str(p) for p in args.external]
         external_records = load_genomes(args.external)
         _print(f"  Loaded {len(external_records)} external genome sequences.")
 
     workers = resolve_worker_count(args.workers)
     _print(
         f"[genoprobe screen] mode={mode}  profile={args.profile or 'balanced'}  "
-        f"max_mismatches={max_mm}  project_genomes={len(project_records)}  "
+        f"max_mismatches={max_mm}  project_genomes={len(project_paths)}  "
         f"external_sequences={len(external_records)}  workers={workers}"
     )
 
-    # Build k-mer index in parallel: one worker task per genome file, partial
-    # dicts are merged incrementally so no full-genome sequences are sent as
-    # task arguments and workers operate on the minimal data needed.
-    kmer_index: dict[str, int] = {}
-    if max_kmer is not None:
-        _print("  Building k-mer index (k=18)...")
-        kmer_paths: list[Path] = []
-        for pname in screened_project_names:
-            fa = base_targets / pname / f"{pname}_targets.fa"
+    # Collect all target FASTA paths used for k-mer index building.
+    all_kmer_paths: list[str] = list(project_paths.values())
+    for n in names:
+        if n not in screened_project_names:
+            fa = base_targets / n / f"{n}_targets.fa"
             if fa.exists():
-                kmer_paths.append(fa)
-        for n in names:
-            if n not in screened_project_names:
-                fa = base_targets / n / f"{n}_targets.fa"
-                if fa.exists():
-                    kmer_paths.append(fa)
-        if workers > 1 and len(kmer_paths) > 1:
-            from concurrent.futures import ProcessPoolExecutor, as_completed
-            with ProcessPoolExecutor(max_workers=workers) as pool:
-                futures = [pool.submit(_build_kmer_from_paths, [p]) for p in kmer_paths]
-                for future in as_completed(futures):
-                    for kmer, count in future.result().items():
-                        kmer_index[kmer] = kmer_index.get(kmer, 0) + count
-        else:
-            kmer_index = build_kmer_index(load_genomes(kmer_paths), k=18)
-        if external_records:
-            ext_index = build_kmer_index(external_records, k=18)
-            for kmer, count in ext_index.items():
-                kmer_index[kmer] = kmer_index.get(kmer, 0) + count
+                all_kmer_paths.append(str(fa))
 
     names_to_run: list[str] = []
     for name in names:
@@ -801,14 +793,26 @@ def cmd_screen(args: argparse.Namespace) -> int:
         else:
             names_to_run.append(name)
 
-    # Set globals for the single-worker path; multi-worker path uses the
-    # initializer to load shared data once per worker process instead.
     global _g_kmer_index, _g_project_records, _g_external_records
-    _g_kmer_index = kmer_index
-    _g_project_records = project_records
-    _g_external_records = external_records
 
     if workers <= 1 or len(names_to_run) <= 1:
+        # Single-worker path: build all data in the main process.
+        project_records: dict[str, list] = {
+            pname: load_genomes([Path(p)]) for pname, p in project_paths.items()
+        }
+        kmer_index: dict[str, int] = {}
+        if max_kmer is not None:
+            _print("  Building k-mer index (k=18)...")
+            kmer_index = build_kmer_index(
+                load_genomes([Path(p) for p in all_kmer_paths]), k=18
+            )
+            if external_records:
+                ext_index = build_kmer_index(external_records, k=18)
+                for kmer, count in ext_index.items():
+                    kmer_index[kmer] = kmer_index.get(kmer, 0) + count
+        _g_kmer_index = kmer_index
+        _g_project_records = project_records
+        _g_external_records = external_records
         for name in names_to_run:
             _, log_lines, _ = _screen_genome(
                 name, base_targets, base_probes, base_screen,
@@ -817,11 +821,17 @@ def cmd_screen(args: argparse.Namespace) -> int:
             for line in log_lines:
                 _print(line)
     else:
+        # Multi-worker path: pass only file paths to the initializer so each
+        # worker loads its own copy from disk.  This avoids pickling large
+        # dicts (k-mer index, genome sequences) through IPC, which previously
+        # triggered OOM kills → BrokenProcessPool with many genomes/workers.
+        if max_kmer is not None:
+            _print("  Building k-mer index (k=18, per worker)...")
         from concurrent.futures import ProcessPoolExecutor, as_completed
         with ProcessPoolExecutor(
             max_workers=workers,
             initializer=_init_screen_worker,
-            initargs=(kmer_index, project_records, external_records),
+            initargs=(project_paths, external_paths, all_kmer_paths, max_kmer is not None),
         ) as pool:
             futures = {
                 pool.submit(

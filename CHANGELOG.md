@@ -6,6 +6,12 @@
 
 - No unreleased changes yet.
 
+## [0.3.1] - 2026-05-29
+
+### Fixed
+
+- `screen` command: `BrokenProcessPool` crash with many genomes and multiple workers. The worker initializer previously received the pre-built k-mer index and all project genome sequences as `initargs`, which pickled potentially several GB of data through IPC to each worker simultaneously. On systems with strict memory overcommit or limited RAM this triggered OOM kills. Workers now receive only file paths and load sequences directly from disk; the OS page cache makes subsequent worker reads cheap. The k-mer index is built once per worker during initialisation rather than once in the main process.
+
 ## [0.3.0] - 2026-05-29
 
 ### Changed
