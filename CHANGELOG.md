@@ -6,6 +6,13 @@
 
 - No unreleased changes yet.
 
+## [0.3.0] - 2026-05-29
+
+### Changed
+
+- `screen` command: k-mer index building is now parallelised across genomes. Each worker reads one genome's FASTA file from disk and returns a partial k-mer dict; the main process merges results incrementally as they arrive. Index build time scales with worker count instead of being serial.
+- `screen` command: worker processes now receive the shared k-mer index and project genome sequences via a `ProcessPoolExecutor` initializer rather than as per-task arguments. Each worker loads this data once at startup; previously the data was re-serialised and sent through the IPC pipe for every genome task, causing peak memory to scale with both the number of workers and the number of genomes. The new approach caps IPC at one transfer per worker and eliminates redundant copies in the pipe buffer.
+
 ## [0.2.1] - 2026-05-29
 
 ### Added

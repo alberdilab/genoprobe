@@ -72,7 +72,7 @@ See [Profiles](../profiles.md) for profile-specific parameter values.
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `--workers / -w N` | auto | Number of worker processes. Defaults to `min(CPU_count, 4)`. Each focal genome is screened in a separate worker process, so speedup scales with genome count up to `--workers`. |
+| `--workers / -w N` | auto | Number of worker processes. Defaults to `min(CPU_count, 4)`. Workers are used in two sequential phases: first to build the k-mer index in parallel (one task per genome), then to screen each focal genome. |
 
 ## How screening works
 
@@ -91,8 +91,10 @@ sequences (all contigs/chromosomes), so cross-genome screening is genome-vs-geno
 ### Per-probe classification
 
 1. **k-mer frequency filter** (optional): An 18-mer index is built from all screening
-   sequences. Any candidate whose most frequent 18-mer exceeds `--max-kmer-frequency`
-   is discarded immediately.
+   sequences. When `--workers` > 1, each genome's k-mer counts are computed in a
+   separate worker process and merged incrementally in the main process, so index
+   build time scales with worker count. Any candidate whose most frequent 18-mer
+   exceeds `--max-kmer-frequency` is discarded immediately.
 
 2. **Mismatch matching**: Each surviving candidate is aligned against every screening
    sequence. Hit classification depends on mode:
@@ -135,7 +137,9 @@ The file contains all columns from `<name>_candidates.tsv` plus:
 - No FASTA files need to be supplied at the `screen` stage unless you want to include
   external genomes via `--external`. All project genomes are loaded automatically from
   the `targets/` directory.
-- Screening is performed in-memory. For very large genomes (> 5 Gbp total across all
-  project genomes), memory usage can be substantial.
+- Screening is performed in-memory. Worker processes share the k-mer index and genome
+  sequences via a per-process initializer, so each worker holds one copy of the shared
+  data rather than receiving a fresh serialised copy per task. Peak memory is therefore
+  proportional to `workers × data_size` rather than `tasks × data_size`.
 - If `<name>_screened.tsv` is present when `panels` is run, it is preferred over the
   raw `<name>_candidates.tsv`.

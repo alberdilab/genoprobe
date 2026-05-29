@@ -139,12 +139,16 @@ def _open_tsv(path: Path):
 # ---------------------------------------------------------------------------
 
 def _parse_targets_file(path: Path) -> tuple[list[dict[str, str]], bool]:
-    """Parse a TSV/CSV batch file into a list of genome/annotation/output dicts.
+    """Parse a TSV/CSV batch file into a list of genome/annotation/output/group dicts.
 
     Accepts files with or without a header row.  With headers the recognised
     column names are ``genomes`` / ``genome``, ``annotations`` / ``annotation``,
-    and ``output``.  Without headers the columns are positional: genome (1),
-    annotation (2, optional), output name (3, optional).
+    ``output``, and ``group`` / ``groups``.  Without headers the columns are
+    positional: genome (1), annotation (2, optional), output name (3, optional),
+    group (4, optional).
+
+    Genomes sharing the same non-empty ``group`` value are combined into a single
+    joint target in genome mode; the group name becomes the output subdirectory.
 
     Returns a tuple of (pairs, has_annotation_col).  ``has_annotation_col`` is
     True when a named annotation column is present in the header, or when at
@@ -174,12 +178,14 @@ def _parse_targets_file(path: Path) -> tuple[list[dict[str, str]], bool]:
             (i for i, h in enumerate(header) if h in {"annotations", "annotation"}), None
         )
         output_idx = next((i for i, h in enumerate(header) if h in {"outputs", "output"}), None)
+        group_idx = next((i for i, h in enumerate(header) if h in {"group", "groups"}), None)
         has_annotation_col = annotation_idx is not None
     else:
         data_rows = rows
         genome_idx = 0
         annotation_idx = 1
         output_idx = 2
+        group_idx = 3
         has_annotation_col = False  # determined after parsing
 
     pairs: list[dict[str, str]] = []
@@ -197,7 +203,12 @@ def _parse_targets_file(path: Path) -> tuple[list[dict[str, str]], bool]:
             if output_idx is not None and output_idx < len(row)
             else ""
         )
-        pairs.append({"genome": genome, "annotation": annotation, "output": output_name})
+        group = (
+            row[group_idx].strip()
+            if group_idx is not None and group_idx < len(row)
+            else ""
+        )
+        pairs.append({"genome": genome, "annotation": annotation, "output": output_name, "group": group})
 
     if not pairs:
         _die(f"No valid genome entries found in targets file: {path}")
@@ -292,6 +303,45 @@ def _run_targets(
     return target_records
 
 
+def _run_joint_targets(
+    members: list[tuple[str, str | None]],
+    out_dir: Path,
+    name: str,
+) -> list[dict[str, Any]]:
+    """Concatenate multiple genomes into one joint target (genome mode only).
+
+    Sequence headers are tagged as ``<genome_stem>|<seqid>`` so that sequences
+    from different constituent genomes with identical contig names remain
+    distinguishable throughout downstream stages.
+    """
+    target_records: list[dict[str, Any]] = []
+    fasta_path = out_dir / f"{name}_targets.fa"
+    bed_path = out_dir / f"{name}_targets.bed"
+
+    with fasta_path.open("w") as fa_out, bed_path.open("w") as bed_out:
+        for genome_path, _ in members:
+            genome_stem = Path(genome_path).stem
+            fasta = load_fasta(genome_path)
+            for seq_name in fasta.keys():
+                seq = str(fasta[seq_name]).upper()
+                tagged = f"{genome_stem}|{seq_name}"
+                fa_out.write(f">{tagged}\n{seq}\n")
+                bed_out.write(f"{tagged}\t0\t{len(seq)}\t{tagged}\n")
+                target_records.append({"target": tagged, "length": len(seq)})
+
+    (out_dir / f"{name}_targets_summary.json").write_text(
+        json.dumps({
+            "name": name,
+            "mode": "genome",
+            "joint": True,
+            "members": [Path(g).stem for g, _ in members],
+            "target_count": len(target_records),
+        }, indent=2),
+        encoding="utf-8",
+    )
+    return target_records
+
+
 def cmd_targets(args: argparse.Namespace) -> int:
     """Extract or define target regions and write FASTA + BED."""
     base_output = resolve_output_root(args.output)
@@ -305,7 +355,7 @@ def cmd_targets(args: argparse.Namespace) -> int:
             _die("--file and --genomes are mutually exclusive.")
         pairs, has_annotation_col = _parse_targets_file(Path(targets_file))
         entries = [
-            (p["genome"], p["annotation"] or None, p["output"] or Path(p["genome"]).stem)
+            (p["genome"], p["annotation"] or None, p["output"] or Path(p["genome"]).stem, p.get("group", ""))
             for p in pairs
         ]
         if explicit_mode is None:
@@ -323,14 +373,35 @@ def cmd_targets(args: argparse.Namespace) -> int:
         if mode == "gene" and not args.annotation:
             _die("--annotation is required in gene mode.")
         entries = [
-            (g, getattr(args, "annotation", None), Path(g).stem)
+            (g, getattr(args, "annotation", None), Path(g).stem, "")
             for g in args.genomes
         ]
         _print(f"[genoprobe targets] mode={mode}  genomes={len(entries)}")
 
     base_targets = targets_dir(base_output)
 
-    for genome_path, annotation_path, name in entries:
+    # Separate joint-group entries (same group name → shared output) from solo entries.
+    joint_groups: dict[str, list[tuple[str, str | None]]] = {}
+    solo_entries: list[tuple[str, str | None, str]] = []
+    for genome_path, annotation_path, name, group in entries:
+        if group:
+            if group not in joint_groups:
+                joint_groups[group] = []
+            joint_groups[group].append((genome_path, annotation_path))
+        else:
+            solo_entries.append((genome_path, annotation_path, name))
+
+    for group_name, members in joint_groups.items():
+        out_dir = ensure_dir(base_targets / group_name)
+        sentinel = out_dir / f"{group_name}_targets.fa"
+        if not args.overwrite and sentinel.exists():
+            _print(f"  [{group_name}] Skipping (outputs exist; use --overwrite to redo).")
+            continue
+        _print(f"  [{group_name}] joint target  members={[Path(g).stem for g, _ in members]}")
+        records = _run_joint_targets(members=members, out_dir=out_dir, name=group_name)
+        _print(f"    Wrote {len(records)} targets → {out_dir}")
+
+    for genome_path, annotation_path, name in solo_entries:
         if mode == "gene" and not annotation_path:
             _die(
                 f"--mode gene requires an annotation for genome '{genome_path}'. "
@@ -515,6 +586,29 @@ def cmd_probes(args: argparse.Namespace) -> int:
 # screen command
 # ---------------------------------------------------------------------------
 
+# Module-level globals loaded once per worker process via _init_screen_worker.
+_g_kmer_index: dict[str, int] = {}
+_g_project_records: dict[str, list] = {}
+_g_external_records: list = []
+
+
+def _init_screen_worker(
+    kmer_index: dict[str, int],
+    project_records: dict[str, list],
+    external_records: list,
+) -> None:
+    """ProcessPoolExecutor initializer — loads shared read-only data once per worker."""
+    global _g_kmer_index, _g_project_records, _g_external_records
+    _g_kmer_index = kmer_index
+    _g_project_records = project_records
+    _g_external_records = external_records
+
+
+def _build_kmer_from_paths(paths: list[Path], k: int = 18) -> dict[str, int]:
+    """Build a partial k-mer index from a list of FASTA files. Worker function."""
+    return build_kmer_index(load_genomes(paths), k)
+
+
 def _screen_genome(
     name: str,
     base_targets: Path,
@@ -525,15 +619,15 @@ def _screen_genome(
     max_kmer: int | None,
     offtarget_pw: float,
     min_ontarget: float,
-    project_records: dict[str, list],
-    external_records: list,
-    kmer_index: dict[str, int],
 ) -> tuple[str, list[str], int]:
     """Screen one focal genome's probe candidates. Runs in a worker process.
 
     Returns (name, log_lines, total_passing) so the caller can flush output
     atomically and avoid interleaving across parallel workers.
     """
+    kmer_index = _g_kmer_index
+    project_records = _g_project_records
+    external_records = _g_external_records
     log: list[str] = []
 
     candidates_path = base_probes / name / f"{name}_candidates.tsv.xz"
@@ -669,20 +763,35 @@ def cmd_screen(args: argparse.Namespace) -> int:
         f"external_sequences={len(external_records)}  workers={workers}"
     )
 
-    # Build k-mer index once from all screening sequences (project + external).
+    # Build k-mer index in parallel: one worker task per genome file, partial
+    # dicts are merged incrementally so no full-genome sequences are sent as
+    # task arguments and workers operate on the minimal data needed.
     kmer_index: dict[str, int] = {}
     if max_kmer is not None:
         _print("  Building k-mer index (k=18)...")
-        kmer_all: list = list(external_records)
-        for recs in project_records.values():
-            kmer_all.extend(recs)
-        # Focal genomes not in screened_project_names still need coverage.
+        kmer_paths: list[Path] = []
+        for pname in screened_project_names:
+            fa = base_targets / pname / f"{pname}_targets.fa"
+            if fa.exists():
+                kmer_paths.append(fa)
         for n in names:
-            if n not in project_records:
+            if n not in screened_project_names:
                 fa = base_targets / n / f"{n}_targets.fa"
                 if fa.exists():
-                    kmer_all.extend(load_genomes([fa]))
-        kmer_index = build_kmer_index(kmer_all, k=18)
+                    kmer_paths.append(fa)
+        if workers > 1 and len(kmer_paths) > 1:
+            from concurrent.futures import ProcessPoolExecutor, as_completed
+            with ProcessPoolExecutor(max_workers=workers) as pool:
+                futures = [pool.submit(_build_kmer_from_paths, [p]) for p in kmer_paths]
+                for future in as_completed(futures):
+                    for kmer, count in future.result().items():
+                        kmer_index[kmer] = kmer_index.get(kmer, 0) + count
+        else:
+            kmer_index = build_kmer_index(load_genomes(kmer_paths), k=18)
+        if external_records:
+            ext_index = build_kmer_index(external_records, k=18)
+            for kmer, count in ext_index.items():
+                kmer_index[kmer] = kmer_index.get(kmer, 0) + count
 
     names_to_run: list[str] = []
     for name in names:
@@ -692,24 +801,33 @@ def cmd_screen(args: argparse.Namespace) -> int:
         else:
             names_to_run.append(name)
 
+    # Set globals for the single-worker path; multi-worker path uses the
+    # initializer to load shared data once per worker process instead.
+    global _g_kmer_index, _g_project_records, _g_external_records
+    _g_kmer_index = kmer_index
+    _g_project_records = project_records
+    _g_external_records = external_records
+
     if workers <= 1 or len(names_to_run) <= 1:
         for name in names_to_run:
             _, log_lines, _ = _screen_genome(
                 name, base_targets, base_probes, base_screen,
                 mode, max_mm, max_kmer, offtarget_pw, min_ontarget,
-                project_records, external_records, kmer_index,
             )
             for line in log_lines:
                 _print(line)
     else:
         from concurrent.futures import ProcessPoolExecutor, as_completed
-        with ProcessPoolExecutor(max_workers=workers) as pool:
+        with ProcessPoolExecutor(
+            max_workers=workers,
+            initializer=_init_screen_worker,
+            initargs=(kmer_index, project_records, external_records),
+        ) as pool:
             futures = {
                 pool.submit(
                     _screen_genome,
                     name, base_targets, base_probes, base_screen,
                     mode, max_mm, max_kmer, offtarget_pw, min_ontarget,
-                    project_records, external_records, kmer_index,
                 ): name
                 for name in names_to_run
             }
@@ -906,8 +1024,11 @@ def _build_parser() -> argparse.ArgumentParser:
     p_targets.add_argument(
         "--file", "-f", metavar="TSV_CSV",
         help=(
-            "TSV/CSV file with one genome-annotation pair per row. "
-            "Recognised column headers: 'genomes', 'annotations', 'output' (subfolder name). "
+            "TSV/CSV file with one genome per row. "
+            "Recognised column headers: 'genomes', 'annotations', 'output' (subfolder name), "
+            "'group' (joint-target group name). "
+            "Genomes sharing the same group name are combined into a single joint target "
+            "(genome mode only); the group name becomes the output subdirectory. "
             "Headerless files use columns in that order. "
             "Mutually exclusive with --genomes."
         ),
