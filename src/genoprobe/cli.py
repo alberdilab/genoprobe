@@ -122,13 +122,17 @@ def _write_tsv(path: Path, rows: list[dict[str, Any]]) -> None:
 # targets command
 # ---------------------------------------------------------------------------
 
-def _parse_targets_file(path: Path) -> list[dict[str, str]]:
+def _parse_targets_file(path: Path) -> tuple[list[dict[str, str]], bool]:
     """Parse a TSV/CSV batch file into a list of genome/annotation/output dicts.
 
     Accepts files with or without a header row.  With headers the recognised
     column names are ``genomes`` / ``genome``, ``annotations`` / ``annotation``,
     and ``output``.  Without headers the columns are positional: genome (1),
     annotation (2, optional), output name (3, optional).
+
+    Returns a tuple of (pairs, has_annotation_col).  ``has_annotation_col`` is
+    True when a named annotation column is present in the header, or when at
+    least one row contains a non-empty annotation value in a headerless file.
     """
     text = path.read_text(encoding="utf-8").strip()
     if not text:
@@ -153,12 +157,14 @@ def _parse_targets_file(path: Path) -> list[dict[str, str]]:
         annotation_idx = next(
             (i for i, h in enumerate(header) if h in {"annotations", "annotation"}), None
         )
-        output_idx = next((i for i, h in enumerate(header) if h == "output"), None)
+        output_idx = next((i for i, h in enumerate(header) if h in {"outputs", "output"}), None)
+        has_annotation_col = annotation_idx is not None
     else:
         data_rows = rows
         genome_idx = 0
         annotation_idx = 1
         output_idx = 2
+        has_annotation_col = False  # determined after parsing
 
     pairs: list[dict[str, str]] = []
     for row in data_rows:
@@ -180,7 +186,10 @@ def _parse_targets_file(path: Path) -> list[dict[str, str]]:
     if not pairs:
         _die(f"No valid genome entries found in targets file: {path}")
 
-    return pairs
+    if not has_header:
+        has_annotation_col = any(p["annotation"] for p in pairs)
+
+    return pairs, has_annotation_col
 
 
 def _run_targets(
@@ -271,26 +280,31 @@ def _run_targets(
 def cmd_targets(args: argparse.Namespace) -> int:
     """Extract or define target regions and write FASTA + BED."""
     base_output = resolve_output_root(args.output)
-    mode = args.mode.lower()
+    explicit_mode = args.mode  # None when not provided on the command line
 
-    if mode not in {"genome", "gene"}:
-        _die(f"--mode must be 'genome' or 'gene', got '{mode}'.")
-
-    targets_file = getattr(args, "targets_file", None)
+    targets_file = getattr(args, "file", None)
 
     # Build a unified list of (genome_path, annotation_path, name) entries.
     if targets_file:
         if args.genomes:
-            _die("--targets-file and --genomes are mutually exclusive.")
-        pairs = _parse_targets_file(Path(targets_file))
+            _die("--file and --genomes are mutually exclusive.")
+        pairs, has_annotation_col = _parse_targets_file(Path(targets_file))
         entries = [
             (p["genome"], p["annotation"] or None, p["output"] or Path(p["genome"]).stem)
             for p in pairs
         ]
+        if explicit_mode is None:
+            mode = "gene" if has_annotation_col else "genome"
+        else:
+            mode = explicit_mode.lower()
         _print(f"[genoprobe targets] mode={mode}  pairs={len(entries)}  (batch)")
     else:
         if not args.genomes:
-            _die("Either --genomes or --targets-file is required.")
+            _die("Either --genomes or --file is required.")
+        if explicit_mode is None:
+            mode = "gene" if args.annotation else "genome"
+        else:
+            mode = explicit_mode.lower()
         if mode == "gene" and not args.annotation:
             _die("--annotation is required in gene mode.")
         entries = [
@@ -685,10 +699,10 @@ def _build_parser() -> argparse.ArgumentParser:
     _add_output(p_targets)
     p_targets.add_argument(
         "--genomes", "-g", nargs="+", default=None, metavar="FASTA",
-        help="One or more genome FASTA files. Mutually exclusive with --targets-file.",
+        help="One or more genome FASTA files. Mutually exclusive with --file.",
     )
     p_targets.add_argument(
-        "--targets-file", "-t", metavar="TSV_CSV",
+        "--file", "-f", metavar="TSV_CSV",
         help=(
             "TSV/CSV file with one genome-annotation pair per row. "
             "Recognised column headers: 'genomes', 'annotations', 'output' (subfolder name). "
@@ -697,8 +711,12 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     p_targets.add_argument(
-        "--mode", "-m", choices=["genome", "gene"], required=True,
-        help="'genome': tile full genome(s); 'gene': use annotated features.",
+        "--mode", "-m", choices=["genome", "gene"], default=None,
+        help=(
+            "'genome': tile full genome(s); 'gene': use annotated features. "
+            "Auto-detected from --annotation or file contents when omitted "
+            "(gene if annotations are present, genome otherwise)."
+        ),
     )
     p_targets.add_argument(
         "--annotation", "-a", metavar="GFF_GTF",

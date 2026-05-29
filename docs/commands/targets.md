@@ -8,22 +8,38 @@ their genomic coordinates.
 
 **Single genome:**
 ```
-genoprobe targets --genomes FASTA [FASTA ...] --output DIR --mode {genome,gene} [OPTIONS]
+genoprobe targets --genomes FASTA [FASTA ...] --output DIR [--mode {genome,gene}] [OPTIONS]
 ```
 
 **Batch (multiple genome-annotation pairs):**
 ```
-genoprobe targets --targets-file FILE --output DIR --mode {genome,gene} [OPTIONS]
+genoprobe targets --file FILE --output DIR [--mode {genome,gene}] [OPTIONS]
 ```
 
 ## Required arguments
 
 | Argument | Description |
 |----------|-------------|
-| `--genomes / -g` | One or more genome FASTA files. Mutually exclusive with `--targets-file`. |
-| `--targets-file / -t` | TSV/CSV batch file of genome-annotation pairs. Mutually exclusive with `--genomes`. |
+| `--genomes / -g` | One or more genome FASTA files. Mutually exclusive with `--file`. |
+| `--file / -f` | TSV/CSV batch file of genome-annotation pairs. Mutually exclusive with `--genomes`. |
 | `--output / -o` | Output directory. Sub-directories are created automatically. |
-| `--mode / -m` | `genome` — tile the full genome(s); `gene` — use annotated features. |
+
+## Mode selection (`--mode / -m`)
+
+`--mode` is **optional**. When omitted, it is inferred automatically:
+
+| Situation | Auto-detected mode |
+|-----------|-------------------|
+| `--annotation` is provided (single-genome) | `gene` |
+| Batch file header contains an `annotation`/`annotations` column with at least one value | `gene` |
+| Neither of the above | `genome` |
+
+An explicit `--mode genome` or `--mode gene` always overrides auto-detection.
+
+| Value | Behaviour |
+|-------|-----------|
+| `genome` | Tile the full genome sequence(s). |
+| `gene` | Extract sequences for annotated features from a GFF3/GTF file. |
 
 ## Mode: `genome`
 
@@ -31,9 +47,9 @@ Tiles every sequence in the input FASTA file(s). Use `--region` to restrict to a
 single genomic interval.
 
 ```bash
+# mode auto-detected as genome (no --annotation given)
 genoprobe targets \
     --genomes genome.fa \
-    --mode genome \
     --output run/
 ```
 
@@ -44,7 +60,6 @@ Restrict genome-mode tiling to one region. Coordinates are **1-based, inclusive*
 ```bash
 genoprobe targets \
     --genomes genome.fa \
-    --mode genome \
     --region chr1:500000-1500000 \
     --output run/
 ```
@@ -56,10 +71,10 @@ Extracts sequences for annotated features from a GFF3 or GTF file.
 its own annotation path.
 
 ```bash
+# mode auto-detected as gene because --annotation is provided
 genoprobe targets \
     --genomes genome.fa \
     --annotation genes.gff \
-    --mode gene \
     --output run/
 ```
 
@@ -81,11 +96,11 @@ genoprobe targets --mode gene --annotation genes.gff --feature gene ...
 genoprobe targets --mode gene --annotation genes.gff --feature CDS exon ...
 ```
 
-## Batch mode: `--targets-file`
+## Batch mode: `--file`
 
-Use `--targets-file / -t` to process multiple genome-annotation pairs in one
-command. Each pair is processed independently and written to its own subfolder
-under `<output>/`.
+Use `--file / -f` to process multiple genome-annotation pairs in one command.
+Each pair is processed independently and written to its own subfolder under
+`<output>/`.
 
 ### File format
 
@@ -98,7 +113,7 @@ detected automatically.
 |--------|----------------------|----------|
 | Genome FASTA | `genomes`, `genome` | Yes |
 | Annotation file | `annotations`, `annotation` | No |
-| Output subfolder | `output` | No |
+| Output subfolder | `outputs`, `output` | No |
 
 ```
 genomes	annotations	output
@@ -125,9 +140,9 @@ to the **genome filename stem** (e.g. `org1.fa` → `org1`).
 ### Example
 
 ```bash
+# mode auto-detected as gene because the file has an annotations column
 genoprobe targets \
-    --targets-file organisms.tsv \
-    --mode gene \
+    --file organisms.tsv \
     --output results/
 ```
 

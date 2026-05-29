@@ -6,6 +6,14 @@
 
 - No unreleased changes yet.
 
+## [0.1.3] - 2026-05-29
+
+### Changed
+
+- `targets` command: `--targets-file / -t` renamed to `--file / -f` for brevity.
+- `targets` command: `--mode / -m` is now optional. When omitted, mode is auto-detected — `gene` if `--annotation` is provided (single-genome mode) or the batch file header contains an `annotations` / `annotation` column with at least one value; `genome` otherwise. An explicit `--mode` always takes precedence.
+- `targets` batch file: `outputs` is now accepted as an alias for the `output` column header, making all column names consistently available in both singular and plural forms (`genome`/`genomes`, `annotation`/`annotations`, `output`/`outputs`).
+
 ## [0.1.2] - 2026-05-29
 
 ### Added
